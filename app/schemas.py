@@ -215,6 +215,13 @@ class FactStatus(str, Enum):
     rejected = "rejected"
 
 
+class ClientSummary(BaseModel):
+    id: str
+    name: str
+    active_facts: int
+    pending_facts: int
+
+
 class BrandFact(BaseModel):
     id: int | None = None
     client_id: str

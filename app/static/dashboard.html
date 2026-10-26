@@ -1,0 +1,569 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Agency Dashboard</title>
+<style>
+  /* Visual language follows the Rề Cà Phê brand dashboard (Tinle0301/recaphe-dashboard). */
+  :root {
+    --bg:#f3f1ec; --panel:#fff; --ink:#17150f; --ink2:#6a655c; --line:#e6e2d8; --zebra:#faf9f6;
+    --navy:#14130f; --brand:#9C6B3F; --brand2:#bb8350; --brand-soft:#f4ece2;
+    --g:#2f9e6b; --g-soft:#e2f3ea; --a:#b5851f; --a-soft:#faf0d8; --r:#d8593f; --r-soft:#f7e1da; --i:#3d6f8e; --i-soft:#e1ecf3;
+    --font-display:Georgia, "Times New Roman", serif;
+    --font-body:-apple-system, BlinkMacSystemFont, "Segoe UI", Inter, Arial, sans-serif;
+  }
+  * { box-sizing:border-box; }
+  html, body { margin:0; }
+  body { font:14px/1.5 var(--font-body); background:var(--bg); color:var(--ink); }
+  a { color:var(--brand); }
+  h1, h2, h3 { margin:0; }
+  .wrap { max-width:1300px; margin:0 auto; padding:0 24px; }
+  /* header + nav */
+  header.top { background:linear-gradient(115deg,#241f17,#14130f); color:#fff; padding:26px 0 20px; }
+  header.top .ey { font-size:11px; letter-spacing:3.5px; text-transform:uppercase; color:var(--brand2); font-weight:700; }
+  header.top h1 { font:800 30px var(--font-display); letter-spacing:.5px; margin-top:6px; }
+  header.top .sub { color:#c8c2b6; font-size:13.5px; margin-top:8px; max-width:880px; }
+  header.top .note { margin-top:11px; font-size:12px; color:#c8c2b6; background:rgba(255,255,255,.05); border:1px solid rgba(255,255,255,.08); border-radius:8px; padding:7px 12px; display:inline-block; }
+  nav.bar { position:sticky; top:0; z-index:60; background:rgba(20,19,15,.97); backdrop-filter:blur(8px); border-bottom:1px solid #2c281f; }
+  nav.bar .inner { display:flex; overflow-x:auto; max-width:1300px; margin:0 auto; padding:0 14px; }
+  nav.bar a { flex:0 0 auto; color:#ada695; font-size:12.5px; font-weight:600; padding:11px 12px; text-decoration:none; border-bottom:3px solid transparent; white-space:nowrap; display:flex; gap:6px; align-items:center; }
+  nav.bar a:hover { color:#fff; } nav.bar a.on { color:#fff; border-bottom-color:var(--brand2); }
+  nav.bar .count { background:var(--brand2); color:#14130f; border-radius:20px; font-size:10.5px; font-weight:800; padding:0 7px; }
+  main { padding:26px 0 40px; animation:f .3s ease; }
+  @keyframes f { from { opacity:0; transform:translateY(6px); } to { opacity:1; transform:none; } }
+  /* section heads */
+  .head { display:flex; align-items:flex-end; justify-content:space-between; gap:16px; flex-wrap:wrap; margin-bottom:18px; }
+  .dnum { font-size:11px; letter-spacing:2px; text-transform:uppercase; color:var(--brand); font-weight:700; }
+  .head h2 { font:700 23px var(--font-display); margin:2px 0 3px; }
+  .sub2 { color:var(--ink2); font-size:12.8px; max-width:900px; margin:0; }
+  h3 { font-size:14.5px; color:var(--navy); margin:0 0 10px; }
+  .back { font-size:12px; font-weight:700; text-decoration:none; }
+  /* cards + grids */
+  .card { background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:16px 17px; box-shadow:0 1px 2px rgba(16,24,40,.05); }
+  .grid { display:grid; gap:13px; }
+  .kpis { grid-template-columns:repeat(4, minmax(0,1fr)); margin-bottom:20px; }
+  .kpi .l { font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.4px; color:var(--brand); }
+  .kpi .n { font:800 34px var(--font-display); line-height:1.15; margin-top:2px; }
+  .kpi.hot { border:2px solid var(--brand); }
+  .lanes { grid-template-columns:repeat(3, minmax(0,1fr)); align-items:start; }
+  .lane > h3 { display:flex; justify-content:space-between; font-size:11px; letter-spacing:2px; text-transform:uppercase; color:var(--brand); font-weight:700; margin:0 2px 10px; }
+  .runcard { display:block; text-decoration:none; color:inherit; background:var(--panel); border:1px solid var(--line); border-left:4px solid var(--brand); border-radius:10px; padding:11px 13px; margin-bottom:9px; box-shadow:0 1px 2px rgba(16,24,40,.05); overflow:hidden; }
+  .runcard:hover { border-color:var(--brand); }
+  .runcard b { font-weight:800; font-size:13.5px; }
+  .runcard .meta { color:var(--ink2); font-size:11.5px; margin-top:2px; }
+  .runcard .row { margin-top:8px; }
+  .runcard .bar2 { display:flex; height:6px; margin:-11px -13px 9px -13px; } .runcard .bar2 i { flex:1; }
+  .empty { color:#9c958a; font-style:italic; font-size:12.5px; padding:14px; border:1px dashed var(--line); border-radius:10px; text-align:center; background:var(--panel); }
+  /* tags (recaphe .tag / .adj) */
+  .pill { display:inline-flex; align-items:center; gap:5px; font-size:10.5px; font-weight:700; padding:2px 9px; border-radius:20px; background:#eceae4; color:#5c5346; white-space:nowrap; }
+  .pill.ok { background:var(--g-soft); color:var(--g); } .pill.warn { background:var(--a-soft); color:var(--a); }
+  .pill.bad { background:var(--r-soft); color:var(--r); } .pill.info { background:var(--i-soft); color:var(--i); }
+  .pill.accent { background:var(--navy); color:#fff; }
+  .chips { display:flex; flex-wrap:wrap; } .chip { display:inline-block; font-size:11.5px; font-weight:700; padding:4px 11px; border-radius:20px; background:#efe9df; color:#5c5346; margin:0 5px 6px 0; }
+  .row { display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
+  /* buttons (recaphe .cbtn) */
+  button, .btn { font:700 12.5px var(--font-body); border-radius:9px; border:1px solid var(--line); background:#fff; color:var(--ink); padding:8px 14px; cursor:pointer; text-decoration:none; display:inline-flex; align-items:center; gap:6px; }
+  button:hover, .btn:hover { border-color:var(--brand); }
+  button.primary, .btn.primary { background:var(--navy); border-color:var(--navy); color:#fff; }
+  button.primary:hover, .btn.primary:hover { background:#2b261d; }
+  button.danger { color:var(--r); }
+  button:disabled { opacity:.5; cursor:not-allowed; }
+  /* forms */
+  label.f { display:block; font-size:10.5px; font-weight:700; text-transform:uppercase; letter-spacing:.4px; color:var(--brand); margin-bottom:4px; }
+  .hint { color:var(--ink2); font-size:12px; font-weight:400; text-transform:none; letter-spacing:0; }
+  input, textarea { font:inherit; width:100%; padding:9px 11px; border-radius:9px; border:1px solid var(--line); background:#fff; color:var(--ink); }
+  input:focus, textarea:focus { outline:2px solid var(--brand2); outline-offset:-1px; }
+  .form { grid-template-columns:1fr 1fr; gap:15px 20px; }
+  .form .wide { grid-column:1 / -1; }
+  /* pipeline (recaphe .rec ranks) */
+  .pipe { display:flex; flex-wrap:wrap; gap:7px; margin:4px 0 18px; }
+  .step { flex:1 1 128px; min-width:128px; background:#fff; border:1px solid var(--line); border-radius:10px; padding:8px 10px; display:flex; gap:9px; align-items:center; }
+  .step .rk { flex:0 0 24px; height:24px; border-radius:6px; background:#eceae4; color:#5c5346; display:flex; align-items:center; justify-content:center; font-weight:800; font-size:11px; }
+  .step .t { font-weight:700; font-size:12px; line-height:1.25; } .step .s { font-size:11px; color:var(--ink2); }
+  .step.cp { border-style:dashed; flex:0 1 118px; min-width:112px; }
+  .step.done .rk { background:var(--g); color:#fff; } .step.done .s { color:var(--g); }
+  .step.run { border-color:var(--i); } .step.run .rk { background:var(--i); color:#fff; animation:pulse 1.2s infinite; } .step.run .s { color:var(--i); font-weight:700; }
+  .step.wait { border:2px solid var(--brand); background:var(--brand-soft); } .step.wait .rk { background:var(--brand); color:#fff; } .step.wait .s { color:var(--brand); font-weight:700; }
+  .step.fail { border-color:var(--r); } .step.fail .rk { background:var(--r); color:#fff; } .step.fail .s { color:var(--r); }
+  .step.skip { opacity:.45; }
+  .dot { width:7px; height:7px; border-radius:50%; background:currentColor; display:inline-block; }
+  @keyframes pulse { 50% { opacity:.4; } }
+  /* tabs (recaphe .cswitch) */
+  .tabs { display:flex; gap:6px; flex-wrap:wrap; margin-bottom:15px; }
+  .tabs button.on { background:var(--navy); color:#fff; border-color:var(--navy); }
+  .banner { border-radius:10px; padding:11px 14px; margin-bottom:14px; display:flex; gap:12px; align-items:center; justify-content:space-between; flex-wrap:wrap; font-size:13px; border-left:4px solid; }
+  .banner.wait { background:var(--brand-soft); border-color:var(--brand); } .banner.bad { background:var(--r-soft); border-color:var(--r); color:#8a3122; }
+  .banner.ok { background:var(--g-soft); border-color:var(--g); color:#1f6b47; } .banner.info { background:var(--i-soft); border-color:var(--i); color:#2b5470; }
+  .two { display:grid; grid-template-columns:minmax(0,1fr) 330px; gap:16px; align-items:start; }
+  .sec { margin-bottom:16px; }
+  .mini { display:grid; grid-template-columns:repeat(auto-fill, minmax(230px,1fr)); gap:10px; }
+  .mini > div { background:#fff; border:1px solid var(--line); border-left:4px solid var(--brand); border-radius:10px; padding:10px 12px; font-size:12.5px; }
+  .mini > div ul { margin:6px 0 0 16px; padding:0; }
+  /* tables (recaphe navy heads, zebra rows) */
+  .tw { overflow-x:auto; }
+  table { width:100%; border-collapse:collapse; background:#fff; border-radius:10px; overflow:hidden; font-size:12.5px; border:1px solid var(--line); }
+  th { background:var(--navy); color:#fff; text-align:left; padding:9px; font-size:11px; font-weight:700; }
+  td { padding:7px 9px; border-top:1px solid var(--line); vertical-align:top; }
+  tr:nth-child(even) td { background:var(--zebra); }
+  td.b { font-weight:600; }
+  ul { margin:4px 0 8px 18px; padding:0; } li { margin:2px 0; }
+  p { margin:0 0 8px; }
+  blockquote { margin:0; padding:12px 16px; border-left:4px solid var(--brand); background:#fbf6ef; border-radius:0 10px 10px 0; font:17px/1.45 var(--font-display); }
+  .tagline { font:700 21px var(--font-display); padding:7px 0; border-bottom:1px solid var(--line); }
+  /* palette (recaphe .frame + .swatch) */
+  .frame { border-radius:10px; overflow:hidden; border:1px solid var(--line); background:#fff; margin-bottom:12px; }
+  .frame .bar2 { height:9px; display:flex; } .frame .bar2 i { flex:1; }
+  .frame .body { padding:22px 20px; }
+  .frame .cap { font-size:10.5px; color:var(--ink2); padding:7px 10px; border-top:1px solid var(--line); display:flex; justify-content:space-between; align-items:center; gap:8px; flex-wrap:wrap; }
+  .preview { border-radius:10px; border:1px solid var(--line); overflow:hidden; }
+  .preview .p-in { padding:22px 20px; display:grid; gap:12px; }
+  .p-card { border-radius:10px; padding:14px; font-size:13.5px; }
+  .p-btn { display:inline-block; margin-top:10px; padding:8px 14px; border-radius:8px; font-weight:700; font-size:12.5px; }
+  .swatches { display:grid; grid-template-columns:repeat(auto-fill, minmax(150px,1fr)); gap:10px; }
+  .sw { border:1px solid var(--line); border-radius:10px; overflow:hidden; background:#fff; }
+  .sw .c { height:64px; } .sw .i { padding:8px 10px; font-size:12px; } .sw code { font-size:11px; color:var(--ink2); }
+  .md h1 { font:700 22px var(--font-display); margin:4px 0 12px; } .md h2 { font:700 17px var(--font-display); margin:18px 0 8px; } .md p { margin:0 0 10px; }
+  .log { font-size:12px; max-height:420px; overflow:auto; }
+  .log div { padding:6px 0; border-top:1px solid var(--line); display:grid; grid-template-columns:70px 1fr; gap:8px; }
+  .log time { color:var(--ink2); font-variant-numeric:tabular-nums; }
+  .q { margin:12px 0; } .q .why { color:var(--ink2); font-size:12px; margin:2px 0 6px; }
+  .q label.f { text-transform:none; letter-spacing:0; font-size:13px; color:var(--ink); }
+  details > summary { cursor:pointer; font-weight:700; }
+  .toast { position:fixed; bottom:20px; right:20px; background:var(--navy); color:#fff; padding:10px 16px; border-radius:10px; font-weight:600; font-size:13px; display:none; z-index:90; border-left:4px solid var(--brand2); }
+  .muted { color:var(--ink2); }
+  .foot { color:var(--ink2); font-size:11.5px; text-align:center; padding:8px 0 40px; }
+  @media (max-width: 960px) { .two { grid-template-columns:1fr; } .lanes { grid-template-columns:1fr; } .kpis { grid-template-columns:repeat(2,minmax(0,1fr)); } }
+  @media (max-width: 640px) { .wrap { padding:0 16px; } .form { grid-template-columns:1fr; } header.top h1 { font-size:24px; } }
+</style>
+</head>
+<body>
+<header class="top"><div class="wrap">
+  <div class="ey">Food &amp; Beverage · Brand Studio</div>
+  <h1>F&amp;B Agency Dashboard</h1>
+  <div class="sub">Six specialist agents take a client brief to research, strategy, messaging, visual identity and a client-ready report. You approve the work at each checkpoint before it moves on.</div>
+  <div class="note" id="foot"></div>
+</div></header>
+<nav class="bar"><div class="inner">
+  <a href="#/" data-nav="overview">Overview <span class="count" id="nav-needs" hidden></span></a>
+  <a href="#/new" data-nav="new">New engagement</a>
+  <a href="#/memory" data-nav="memory">Brand memory <span class="count" id="nav-facts" hidden></span></a>
+  <a href="#/how" data-nav="how">How it works</a>
+</div></nav>
+<div class="wrap"><main id="view"></main></div>
+<div class="wrap foot">Agents draft, people decide. Nothing reaches a client without final sign-off.</div>
+<div class="toast" id="toast"></div>
+<script>
+// ------------------------------------------------------------------ helpers
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+async function api(path, opts = {}) {
+  const r = await fetch(path, {headers:{'Content-Type':'application/json'}, ...opts});
+  const isJson = r.headers.get('content-type')?.includes('json');
+  const body = isJson ? await r.json() : await r.text();
+  if (!r.ok) throw new Error(isJson ? (typeof body.detail === 'string' ? body.detail : JSON.stringify(body.detail)) : body);
+  return body;
+}
+function toast(msg) { const t = $('#toast'); t.textContent = msg; t.style.display = 'block'; clearTimeout(t._h); t._h = setTimeout(() => t.style.display = 'none', 3200); }
+function ago(iso) {
+  const s = Math.max(0, (Date.now() - new Date(iso)) / 1000);
+  if (s < 60) return 'just now'; if (s < 3600) return Math.floor(s/60) + 'm ago';
+  if (s < 86400) return Math.floor(s/3600) + 'h ago'; return Math.floor(s/86400) + 'd ago';
+}
+const clock = iso => new Date(iso).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+const slug = s => s.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+const lines = s => s.split('\n').map(x => x.trim()).filter(Boolean);
+const list = xs => xs && xs.length ? '<ul>' + xs.map(x => `<li>${esc(x)}</li>`).join('') + '</ul>' : '<p class="muted">None.</p>';
+const chips = xs => `<div class="chips">${(xs||[]).map(x => `<span class="chip">${esc(x)}</span>`).join('')}</div>`;
+function md(src) { // small, safe Markdown: headings, lists, bold, italic, paragraphs
+  const inline = s => esc(s).replace(/\*\*(.+?)\*\*/g, '<b>$1</b>').replace(/\*(.+?)\*/g, '<i>$1</i>');
+  let out = '', inList = false;
+  for (const raw of src.split('\n')) {
+    const l = raw.trimEnd();
+    const li = l.match(/^\s*[-*]\s+(.*)/);
+    if (li) { if (!inList) { out += '<ul>'; inList = true; } out += `<li>${inline(li[1])}</li>`; continue; }
+    if (inList) { out += '</ul>'; inList = false; }
+    const h = l.match(/^(#{1,3})\s+(.*)/);
+    if (h) out += `<h${h[1].length}>${inline(h[2])}</h${h[1].length}>`;
+    else if (l.trim()) out += `<p>${inline(l)}</p>`;
+  }
+  return out + (inList ? '</ul>' : '');
+}
+function lum(hex) { const c = [1,3,5].map(i => parseInt(hex.slice(i, i+2), 16) / 255).map(v => v <= .03928 ? v/12.92 : ((v+.055)/1.055)**2.4); return .2126*c[0] + .7152*c[1] + .0722*c[2]; }
+function contrast(a, b) { try { const [x, y] = [lum(a), lum(b)].sort((p, q) => q - p); return (x + .05) / (y + .05); } catch { return 0; } }
+
+// ------------------------------------------------------------------ state + router
+let SETTINGS = null, editing = false, timer = null, currentTab = {};
+const AGENTS = {
+  research_analyst:'Research Analyst', brand_strategist:'Brand Strategist', messaging_lead:'Messaging Lead',
+  identity_direction:'Identity Direction', report_producer:'Report Producer', qa_reviewer:'QA Reviewer', fact_extractor:'Fact Extractor'
+};
+const CP_LABEL = {research:'Research review', strategy:'Strategy review', creative:'Creative review', final:'Final sign-off'};
+const REVIEW_TABS = {research:['research'], strategy:['strategy'], creative:['messaging','identity'], final:['report','qa','messaging','identity']};
+
+function route() {
+  editing = false; clearInterval(timer);
+  const [, page, arg] = location.hash.replace(/^#/, '').split('/');
+  document.querySelectorAll('[data-nav]').forEach(a => a.classList.toggle('on', a.dataset.nav === (page || 'overview') || (page === 'run' && a.dataset.nav === 'overview') || (page === 'client' && a.dataset.nav === 'memory')));
+  const views = {'':overview, new:newRun, run:() => runView(arg), memory, client:() => clientView(decodeURIComponent(arg)), how};
+  (views[page || ''] || overview)();
+}
+function poll(fn, ms = 3000) { clearInterval(timer); timer = setInterval(() => { if (!editing && !document.hidden) fn(); }, ms); }
+window.addEventListener('hashchange', route);
+document.addEventListener('input', e => { if (e.target.closest('[data-editable]')) editing = true; });
+
+async function refreshNav() {
+  try {
+    const [board, clients] = await Promise.all([api('/runs'), api('/clients')]);
+    const n = board.needs_you.length, f = clients.reduce((a, c) => a + c.pending_facts, 0);
+    $('#nav-needs').hidden = !n; $('#nav-needs').textContent = n;
+    $('#nav-facts').hidden = !f; $('#nav-facts').textContent = f;
+    return {board, clients};
+  } catch { return null; }
+}
+
+// ------------------------------------------------------------------ overview
+function runStatus(v) {
+  const r = v.run;
+  if (v.open_checkpoint) return `<span class="pill accent"><span class="dot"></span>${esc(CP_LABEL[v.open_checkpoint])}</span>`;
+  if (r.status === 'failed') return '<span class="pill bad">Failed</span>';
+  if (r.status === 'running') return `<span class="pill info"><span class="dot"></span>Working: ${esc(r.stage)}</span>`;
+  if (r.status === 'completed') return '<span class="pill ok">Completed</span>';
+  return `<span class="pill">${esc(r.status)}</span>`;
+}
+function runCard(v) {
+  const r = v.run, qa = r.outputs.qa;
+  const qaPill = qa ? (qa.gate_passed ? `<span class="pill ok">QA ${qa.score}/10</span>` : '<span class="pill warn">QA flagged</span>') : '';
+  return `<a class="runcard" href="#/run/${r.id}"><b>${esc(r.brief.client_name)}</b>
+    <div class="meta">${esc(r.brief.business_type)} · ${esc(r.brief.location)} · ${ago(r.updated_at)}</div>
+    <div class="row">${runStatus(v)}${qaPill}</div></a>`;
+}
+async function overview() {
+  const view = $('#view');
+  const draw = async () => {
+    const data = await refreshNav(); if (!data) { view.innerHTML = '<p>Cannot reach the API.</p>'; return; }
+    const {board, clients} = data, pendingFacts = clients.reduce((a, c) => a + c.pending_facts, 0);
+    const lane = (key, title, empty) => `<div class="lane"><h3><span>${title}</span><span>${board[key].length}</span></h3>
+      ${board[key].map(runCard).join('') || `<div class="empty">${empty}</div>`}</div>`;
+    view.innerHTML = `<div class="head"><div><div class="dnum">01 · Overview</div><h2>Engagements</h2><p class="sub2">Every engagement, with what needs you first.</p></div>
+        <a class="btn primary" href="#/new">New engagement</a></div>
+      <div class="grid kpis">
+        <div class="card kpi ${board.needs_you.length ? 'hot' : ''}"><div class="n">${board.needs_you.length}</div><div class="l">Need your review</div></div>
+        <div class="card kpi"><div class="n">${board.working.length}</div><div class="l">Agents working</div></div>
+        <div class="card kpi"><div class="n">${board.done.filter(v => v.run.status === 'completed').length}</div><div class="l">Completed</div></div>
+        <a class="card kpi ${pendingFacts ? 'hot' : ''}" href="#/memory" style="text-decoration:none;color:inherit"><div class="n">${pendingFacts}</div><div class="l">Brand facts to confirm</div></a>
+      </div>
+      <div class="grid lanes">
+        ${lane('needs_you', 'Needs you', 'Nothing waiting on you.')}
+        ${lane('working', 'Working', 'No agents running.')}
+        ${lane('done', 'Done', 'No finished engagements yet.')}
+      </div>`;
+  };
+  await draw(); poll(draw);
+}
+
+// ------------------------------------------------------------------ new engagement
+const SAMPLE = {client_name:'Harbor Hops Brewing', business_type:'craft brewery and taproom', location:'Portland, Maine',
+  target_audience:'locals aged 25-45 who value small-batch beer and waterfront hangouts',
+  goals:'Rebrand ahead of the first canning run\nStand apart from tourist-focused breweries',
+  constraints:'Keep the name Harbor Hops\nBudget covers one photo shoot\nCans must fit a 16oz sleeve label',
+  competitors:'Allagash\nBissell Brothers', products:'Low Tide Hazy IPA\nSea Salt Gose\nFog Line Pilsner',
+  notes:'Founded 2019 by two former lobstermen. Taproom is on a working pier. Grain comes from Maine Grains in Skowhegan.'};
+function newRun() {
+  const field = (id, label, hint, type = 'input', wide = false) => `<div class="${wide ? 'wide' : ''}">
+    <label class="f" for="${id}">${label} <span class="hint">${hint}</span></label>
+    ${type === 'input' ? `<input id="${id}">` : `<textarea id="${id}" rows="${type === 'big' ? 4 : 3}"></textarea>`}</div>`;
+  $('#view').innerHTML = `<div class="head"><div><div class="dnum">02 · New engagement</div><h2>Start from a client brief</h2><p class="sub2">Fill in the client brief. The Research Analyst starts as soon as you submit.</p></div>
+      <button type="button" id="sample">Fill with sample brief</button></div>
+    <form class="card" id="brief" data-editable>
+      <div class="grid form">
+        ${field('client_name', 'Business name', '')}
+        ${field('client_id', 'Client ID', 'reuse it for repeat clients so brand memory carries over')}
+        ${field('business_type', 'Business type', 'e.g. café, plant-based bakery, brewery')}
+        ${field('location', 'Location', '')}
+        ${field('target_audience', 'Target audience', '', 'input', true)}
+        ${field('goals', 'Goals', 'one per line', 'area')}
+        ${field('constraints', 'Constraints', 'one per line', 'area')}
+        ${field('competitors', 'Competitors', 'one per line', 'area')}
+        ${field('products', 'Signature products', 'one per line', 'area')}
+        ${field('notes', 'Notes', 'history, sourcing, anything the team should know', 'big', true)}
+      </div>
+      <div class="row" style="margin-top:18px"><button class="primary" id="go">Start engagement</button><span class="hint">You review research before anything else runs.</span></div>
+    </form>`;
+  let idTouched = false;
+  $('#client_id').addEventListener('input', () => idTouched = true);
+  $('#client_name').addEventListener('input', () => { if (!idTouched) $('#client_id').value = slug($('#client_name').value); });
+  $('#sample').onclick = () => { for (const [k, v] of Object.entries(SAMPLE)) $('#' + k).value = v; $('#client_id').value = slug(SAMPLE.client_name); };
+  $('#brief').onsubmit = async e => {
+    e.preventDefault();
+    const v = id => $('#' + id).value.trim();
+    if (!v('client_name') || !v('business_type') || !v('location') || !v('target_audience') || !lines(v('goals')).length) {
+      toast('Business name, type, location, audience and at least one goal are required.'); return;
+    }
+    const brief = {client_id: v('client_id') || slug(v('client_name')), client_name: v('client_name'), business_type: v('business_type'),
+      location: v('location'), target_audience: v('target_audience'), goals: lines(v('goals')), constraints: lines(v('constraints')),
+      competitors: lines(v('competitors')), products: lines(v('products')), notes: v('notes')};
+    $('#go').disabled = true;
+    try { const res = await api('/runs', {method:'POST', body:JSON.stringify(brief)}); location.hash = '#/run/' + res.run.id; }
+    catch (err) { toast(err.message); $('#go').disabled = false; }
+  };
+}
+
+// ------------------------------------------------------------------ run view
+function pipeline(run, events, openCp) {
+  const started = {}, done = {}, decided = {};
+  for (const e of events) {
+    if (e.kind === 'agent.started') started[e.detail.agent] = (started[e.detail.agent] || 0) + 1;
+    if (e.kind === 'agent.completed') done[e.detail.agent] = (done[e.detail.agent] || 0) + 1;
+    if (e.kind === 'checkpoint.decided') decided[e.detail.checkpoint] = e.detail.decision;
+  }
+  const cps = new Set(SETTINGS?.checkpoints || ['research','strategy','final']);
+  const steps = [['a','research_analyst'],['c','research'],['a','brand_strategist'],['c','strategy'],['a','messaging_lead'],['a','identity_direction'],
+    ['c','creative'],['a','report_producer'],['a','qa_reviewer'],['c','final'],['a','fact_extractor']];
+  let n = 0;
+  return '<div class="pipe">' + steps.map(([kind, key]) => {
+    if (kind === 'c') {
+      if (!cps.has(key)) return '';
+      const d = decided[key];
+      let cls = '', s = 'Not reached';
+      if (openCp === key) { cls = 'wait'; s = 'Waiting for you'; }
+      else if (d === 'approve') { cls = 'done'; s = 'Approved'; }
+      else if (d === 'reject') { cls = 'fail'; s = 'Rejected'; }
+      else if (d === 'request_changes') { s = 'Changes requested'; }
+      return `<div class="step cp ${cls}"><div class="rk">✋</div><div><div class="t">${esc(CP_LABEL[key])}</div><div class="s">${s}</div></div></div>`;
+    }
+    const st = started[key] || 0, dn = done[key] || 0;
+    let cls = '', s = 'Queued';
+    if (st > dn && run.status === 'running') { cls = 'run'; s = 'Working'; }
+    else if (st > dn && run.status === 'failed') { cls = 'fail'; s = 'Failed'; }
+    else if (dn) { cls = 'done'; s = dn > 1 ? `Done · ${dn} passes` : 'Done'; }
+    if (run.status === 'rejected' && !dn) cls = 'skip';
+    return `<div class="step ${cls}"><div class="rk">${++n}</div><div><div class="t">${esc(AGENTS[key])}</div><div class="s">${s}</div></div></div>`;
+  }).join('') + '</div>';
+}
+
+const R = {
+  research(o) {
+    return `<div class="sec"><h3>Market</h3><p>${esc(o.market_summary)}</p></div>
+      <div class="sec"><h3>Audience insights</h3><div class="mini">${o.audience_insights.map(i => `<div><b>${esc(i.insight)}</b>
+        <div class="hint" style="margin:4px 0">${esc(i.evidence)}</div><span class="pill ${i.confidence === 'high' ? 'ok' : i.confidence === 'medium' ? 'info' : 'warn'}">${esc(i.confidence)} confidence</span></div>`).join('')}</div></div>
+      <div class="sec"><h3>Competitors</h3><table><tr><th>Name</th><th>Their positioning</th><th>Gap we can own</th></tr>
+        ${o.competitor_landscape.map(c => `<tr><td><b>${esc(c.name)}</b></td><td>${esc(c.positioning)}</td><td>${esc(c.gap_we_can_own)}</td></tr>`).join('')}</table></div>
+      <div class="sec"><h3>Category trends</h3>${chips(o.category_trends)}</div>
+      <div class="sec"><h3>Regulatory notes</h3>${list(o.regulatory_notes)}</div>`;
+  },
+  strategy(o) {
+    return `<div class="sec"><h3>Positioning</h3><blockquote>${esc(o.positioning_statement)}</blockquote></div>
+      <div class="sec"><h3>Brand promise</h3><p>${esc(o.brand_promise)}</p></div>
+      <div class="sec"><h3>Pillars</h3><div class="mini">${o.pillars.map(p => `<div><b>${esc(p.name)}</b><div class="hint">${esc(p.description)}</div>${list(p.proof_points)}</div>`).join('')}</div></div>
+      <div class="sec"><h3>Personality</h3>${chips(o.personality_traits)}</div>
+      <div class="sec"><h3>Differentiation</h3><p>${esc(o.differentiation)}</p></div>
+      <div class="sec"><h3>Risks</h3>${list(o.risks)}</div>`;
+  },
+  messaging(o) {
+    return `<div class="sec"><h3>Tagline options</h3>${o.tagline_options.map(t => `<div class="tagline">${esc(t)}</div>`).join('')}</div>
+      <div class="sec"><h3>Elevator pitch</h3><p>${esc(o.elevator_pitch)}</p></div>
+      <div class="sec"><h3>Key messages</h3><table><tr><th>Pillar</th><th>Message</th><th>Proof</th></tr>
+        ${o.key_messages.map(m => `<tr><td><span class="pill">${esc(m.pillar)}</span></td><td>${esc(m.message)}</td><td class="muted">${esc(m.proof)}</td></tr>`).join('')}</table></div>
+      <div class="sec"><h3>Tone of voice</h3><p>${esc(o.tone_of_voice.summary)}</p>
+        <div class="mini"><div><b class="pill ok">Do</b>${list(o.tone_of_voice.do)}</div><div><b class="pill bad">Don't</b>${list(o.tone_of_voice.dont)}</div></div></div>
+      <div class="sec"><h3>Sample copy</h3><div class="mini">${o.sample_copy.map(c => `<div><span class="hint">${esc(c.channel)}</span><div style="margin-top:4px">${esc(c.copy_text)}</div></div>`).join('')}</div></div>`;
+  },
+  identity(o) {
+    const t = o.tokens, fonts = [o.typography.display, o.typography.body];
+    loadFonts(fonts);
+    const r = (a, b, min) => { const v = contrast(a, b); return `<span class="ratio pill ${v >= min ? 'ok' : 'bad'}">${v.toFixed(1)}:1</span>`; };
+    return `<div class="sec"><h3>Direction</h3><p>${esc(o.visual_direction_summary)}</p>${chips(o.mood_keywords)}</div>
+      <div class="sec"><h3>Symbol logic</h3><p>${esc(o.symbol_logic)}</p></div>
+      <div class="sec"><h3>Palette</h3><div class="swatches">${o.color_palette.map(c => `<div class="sw"><div class="c" style="background:${esc(c.hex)}"></div>
+        <div class="i"><b>${esc(c.name)}</b> <code>${esc(c.hex)}</code><div class="hint">${esc(c.rationale)}</div></div></div>`).join('')}</div></div>
+      <div class="sec"><h3>Live preview from the tokens</h3>
+        <div class="preview" style="background:${esc(t.bg)};color:${esc(t.fg)}"><div class="p-in">
+          <div style="font-family:'${esc(o.typography.display)}',Georgia,serif;font-size:26px;font-weight:600">Headline in ${esc(o.typography.display)}</div>
+          <div style="font-family:'${esc(o.typography.body)}',system-ui;color:${esc(t.muted)};margin-top:4px">Body and muted text in ${esc(o.typography.body)}.</div>
+          <div class="p-card" style="background:${esc(t.surface)};border:1px solid ${esc(t.border)};font-family:'${esc(o.typography.body)}',system-ui">
+            Menu card on the surface color.<br><span class="p-btn" style="background:${esc(t.accent)};color:${esc(t.accent_on)}">Order ahead</span></div>
+        </div></div>
+        <div class="row" style="margin-top:8px"><span class="hint">Contrast:</span> text ${r(t.fg, t.bg, 4.5)} muted ${r(t.muted, t.bg, 4.5)} button ${r(t.accent_on, t.accent, 4.5)} accent on bg ${r(t.accent, t.bg, 3)}</div></div>
+      <div class="sec"><h3>Typography</h3><p><b>Display:</b> ${esc(o.typography.display)} · <b>Body:</b> ${esc(o.typography.body)}</p><p class="muted">${esc(o.typography.rationale)}</p></div>
+      <div class="sec"><h3>Logo</h3><p><span class="pill accent">${esc(o.logo_concept_method.replace(/_/g, ' '))}</span></p><p>${esc(o.logo_direction)}</p></div>
+      <div class="sec"><h3>Imagery</h3><p>${esc(o.imagery_style)}</p></div>
+      <div class="sec"><h3>Packaging and signage</h3><p>${esc(o.packaging_and_signage_notes)}</p></div>
+      <div class="sec"><h3>Avoid</h3>${list(o.anti_patterns)}</div>`;
+  },
+  qa(o) {
+    const sev = s => `<span class="pill ${s === 'blocker' ? 'bad' : s === 'major' ? 'warn' : ''}">${esc(s)}</span>`;
+    const auto = (o.automated_findings || []);
+    return `<div class="banner ${o.gate_passed ? 'ok' : 'bad'}"><div><b>${o.gate_passed ? 'QA passed' : 'QA did not pass'}</b> after ${o.attempts} attempt${o.attempts > 1 ? 's' : ''} · score ${o.score}/10</div></div>
+      <p>${esc(o.summary)}</p>
+      <div class="sec"><h3>Reviewer issues</h3>${o.issues.length ? `<table><tr><th>Severity</th><th>Where</th><th>Problem</th><th>Fix</th></tr>
+        ${o.issues.map(i => `<tr><td>${sev(i.severity)}</td><td><code>${esc(i.location)}</code></td><td>${esc(i.problem)}</td><td class="muted">${esc(i.suggested_fix)}</td></tr>`).join('')}</table>` : '<p class="muted">None.</p>'}</div>
+      <div class="sec"><h3>Automated checks</h3>${auto.length ? `<table><tr><th>Severity</th><th>Where</th><th>Finding</th></tr>
+        ${auto.map(f => `<tr><td>${sev(f.severity)}</td><td><code>${esc(f.location)}</code></td><td>${esc(f.problem)}</td></tr>`).join('')}</table>` : '<p class="muted">All checks passed: no health claims, placeholders, unsourced metrics, or contrast failures.</p>'}</div>`;
+  },
+};
+const fontsLoaded = new Set();
+function loadFonts(names) {
+  const fresh = names.filter(n => n && !fontsLoaded.has(n));
+  if (!fresh.length) return;
+  fresh.forEach(n => fontsLoaded.add(n));
+  const l = document.createElement('link'); l.rel = 'stylesheet';
+  l.href = 'https://fonts.googleapis.com/css2?' + fresh.map(n => 'family=' + encodeURIComponent(n).replace(/%20/g, '+')).join('&') + '&display=swap';
+  document.head.appendChild(l);
+}
+const TAB_NAMES = {research:'Research', strategy:'Strategy', messaging:'Messaging', identity:'Identity', report:'Report', qa:'QA'};
+async function renderTab(run, key) {
+  if (key === 'report') {
+    try { return `<div class="md">${md(await api(`/runs/${run.id}/report.md`))}</div>`; } catch { return '<p class="muted">Not produced yet.</p>'; }
+  }
+  return R[key](run.outputs[key]);
+}
+function tabs(id, keys, active) {
+  return `<div class="tabs" data-tabs="${id}">${keys.map(k => `<button data-k="${k}" class="${k === active ? 'on' : ''}">${TAB_NAMES[k]}</button>`).join('')}</div><div id="tab-${id}"></div>`;
+}
+async function wireTabs(run, id, keys) {
+  const box = document.querySelector(`[data-tabs="${id}"]`); if (!box) return;
+  const show = async k => { currentTab[id] = k; box.querySelectorAll('button').forEach(b => b.classList.toggle('on', b.dataset.k === k)); $('#tab-' + id).innerHTML = await renderTab(run, k); };
+  box.querySelectorAll('button').forEach(b => b.onclick = () => show(b.dataset.k));
+  await show(keys.includes(currentTab[id]) ? currentTab[id] : keys[0]);
+}
+
+async function runView(id) {
+  currentTab = {};
+  let lastSig = '';
+  const draw = async (force) => {
+    let v, events;
+    try { [v, events] = await Promise.all([api('/runs/' + id), api(`/runs/${id}/events`)]); }
+    catch (e) { $('#view').innerHTML = `<p>${esc(e.message)}</p><a href="#/">Back to overview</a>`; clearInterval(timer); return; }
+    const sig = v.run.updated_at + events.length;
+    if (!force && sig === lastSig) return; lastSig = sig;
+    refreshNav();
+    const r = v.run, cp = v.open_checkpoint, have = Object.keys(TAB_NAMES).filter(k => r.outputs[k]);
+    let banner = '';
+    if (cp) banner = `<div class="banner wait"><div><b>${esc(CP_LABEL[cp])} is waiting for you.</b> Review below, then approve, request changes or reject.</div></div>`;
+    else if (r.status === 'running') banner = `<div class="banner info"><div><span class="dot"></span> <b>Agents are working.</b> This page updates on its own.</div></div>`;
+    else if (r.status === 'failed') banner = `<div class="banner bad"><div><b>A stage failed.</b> ${esc(r.error)}</div><button id="retry">Retry stage</button></div>`;
+    else if (r.status === 'completed') banner = `<div class="banner ok"><div><b>Engagement complete.</b> Brand memory saved ${r.outputs.facts.active} facts, ${r.outputs.facts.pending} waiting for you to confirm.</div><a class="btn" href="#/client/${encodeURIComponent(r.brief.client_id)}">Review facts</a></div>`;
+    else if (r.status === 'rejected') banner = `<div class="banner bad"><div><b>Rejected.</b> This engagement was stopped.</div></div>`;
+    const downloads = r.outputs.identity || r.outputs.report ? `<div class="card sec"><h3>Deliverables</h3>
+        ${r.outputs.report ? `<p><a class="btn" href="/runs/${r.id}/report.md" target="_blank">Brand report (Markdown)</a></p>` : ''}
+        ${r.outputs.identity ? `<p><a class="btn" href="/runs/${r.id}/design-system.zip">Design system (.zip)</a></p><p class="hint">DESIGN.md, tokens.css and manifest.json for building the client's website.</p>` : ''}</div>` : '';
+    const reviewKeys = cp ? REVIEW_TABS[cp].filter(k => r.outputs[k]) : [];
+    const questions = cp === 'research' && r.outputs.research.open_questions.length ? `<div class="sec"><h3>Questions for the client</h3>
+        <p class="hint">Each has a recommended answer. Change it to what the client actually said. Every later agent sees these answers.</p>
+        ${r.outputs.research.open_questions.map((q, n) => `<div class="q"><label class="f">${n+1}. ${esc(q.question)}</label><div class="why">${esc(q.why_it_matters)}</div>
+          <input data-q="${esc(q.question)}" value="${esc(q.recommended_answer)}"></div>`).join('')}</div>` : '';
+    const decision = cp ? `<div class="card" data-editable style="margin-bottom:20px">
+        ${tabs('review', reviewKeys, reviewKeys[0])}
+        ${questions}
+        <label class="f" for="feedback">Feedback <span class="hint">required to request changes; optional note on approval</span></label>
+        <textarea id="feedback" rows="3" placeholder="${cp === 'final' ? 'e.g. Shorten the executive summary and lead with the tagline.' : 'e.g. Add Oxbow as a competitor and weight locals over tourists.'}"></textarea>
+        <div class="row" style="margin-top:12px"><button class="primary" data-d="approve">Approve${cp === 'final' ? ' and finish' : ' and continue'}</button>
+          <button data-d="request_changes">Request changes</button><button class="danger" data-d="reject">Reject</button></div></div>` : '';
+    const log = events.slice().reverse().map(e => {
+      const d = e.detail || {};
+      const text = {
+        'run.created':'Engagement created', 'stage.started':`Stage ${e.stage} started`, 'stage.completed':`Stage ${e.stage} finished`,
+        'agent.started':`${AGENTS[d.agent] || d.agent} started`, 'agent.completed':`${AGENTS[d.agent] || d.agent} finished in ${(d.latency_ms/1000).toFixed(1)}s`,
+        'checkpoint.opened':`${CP_LABEL[d.checkpoint]} opened`, 'checkpoint.decided':`${CP_LABEL[d.checkpoint]}: ${String(d.decision).replace('_',' ')} by ${e.actor}${d.feedback ? ` · “${d.feedback}”` : ''}`,
+        'qa.reviewed':`QA attempt ${d.attempt}: ${d.passed ? 'passed' : 'failed'} (${d.score}/10)`, 'qa.routed_revision':`QA sent ${d.issues?.length} issue(s) back to ${AGENTS[d.agent] || d.agent}`,
+        'qa.escalated':'QA escalated to you', 'facts.saved':`Facts saved: ${d.active} active, ${d.pending} pending, ${d.dropped} dropped`,
+        'stage.failed':`Failed: ${d.error}`, 'run.completed':'Engagement complete',
+      }[e.kind] || e.kind;
+      return `<div><time>${clock(e.at)}</time><span>${esc(text)}</span></div>`;
+    }).join('');
+    const b = r.brief;
+    $('#view').innerHTML = `<div class="head"><div><a href="#/" class="back">← Overview</a><div class="dnum" style="margin-top:8px">Engagement</div><h2>${esc(b.client_name)}</h2>
+        <p class="sub2">${esc(b.business_type)} · ${esc(b.location)} · started ${ago(r.created_at)}</p></div><div class="row">${runStatus(v)}</div></div>
+      ${pipeline(r, events, cp)}
+      ${banner}
+      ${decision}
+      <div class="two"><div>
+        ${have.length && !cp ? `<div class="card">${tabs('all', have, have.includes('report') ? 'report' : have[have.length-1])}</div>` : ''}
+        ${cp && have.length ? `<details class="card"><summary><b>All deliverables so far</b></summary>${tabs('all', have, have[0])}</details>` : ''}
+      </div><div>
+        ${downloads}
+        <div class="card sec"><h3>Brief</h3><p class="hint">Audience</p><p>${esc(b.target_audience)}</p><p class="hint">Goals</p>${list(b.goals)}
+          ${b.constraints.length ? `<p class="hint">Constraints</p>${list(b.constraints)}` : ''}${r.answers.length ? `<p class="hint">Client answers</p><ul>${r.answers.map(a => `<li>${esc(a.question)} <b>${esc(a.answer)}</b></li>`).join('')}</ul>` : ''}</div>
+        <div class="card sec"><h3>Activity</h3><div class="log">${log}</div>
+          <p class="hint" style="margin-top:8px">Tokens used: ${r.usage.input_tokens.toLocaleString()} in · ${r.usage.output_tokens.toLocaleString()} out</p></div>
+      </div></div>`;
+    if (cp) await wireTabs(r, 'review', reviewKeys);
+    if (have.length) await wireTabs(r, 'all', have);
+    $('#retry')?.addEventListener('click', async () => { await api(`/runs/${id}/retry`, {method:'POST'}); toast('Retrying the failed stage'); draw(true); });
+    document.querySelectorAll('[data-d]').forEach(btn => btn.onclick = async () => {
+      const decision = btn.dataset.d, feedback = $('#feedback').value.trim();
+      if (decision === 'request_changes' && !feedback) { toast('Write what should change first.'); $('#feedback').focus(); return; }
+      if (decision === 'reject' && !confirm('Reject and stop this engagement?')) return;
+      const answers = [...document.querySelectorAll('input[data-q]')].map(i => ({question:i.dataset.q, answer:i.value}));
+      document.querySelectorAll('[data-d]').forEach(b => b.disabled = true);
+      try {
+        await api(`/runs/${id}/decision`, {method:'POST', body:JSON.stringify({checkpoint:cp, decision, feedback, answers, actor:'strategist'})});
+        toast({approve:'Approved. The next agents are starting.', request_changes:'Sent back with your feedback.', reject:'Engagement rejected.'}[decision]);
+      } catch (e) { toast(e.message); }
+      editing = false; draw(true);
+    });
+  };
+  await draw(true); poll(() => draw(false), 2500);
+}
+
+// ------------------------------------------------------------------ brand memory
+async function memory() {
+  const clients = await api('/clients'); refreshNav();
+  $('#view').innerHTML = `<div class="head"><div><div class="dnum">03 · Brand memory</div><h2>What the agency knows</h2><p class="sub2">Durable facts per client. Active facts go to every agent in the client's next engagement; pending facts wait for you.</p></div></div>
+    ${clients.length ? `<div class="card"><table><tr><th>Client</th><th>Active facts</th><th>Waiting for you</th><th></th></tr>
+      ${clients.map(c => `<tr><td><b>${esc(c.name)}</b><div class="hint">${esc(c.id)}</div></td><td>${c.active_facts}</td>
+        <td>${c.pending_facts ? `<span class="pill accent">${c.pending_facts} to confirm</span>` : '<span class="muted">0</span>'}</td>
+        <td><a class="btn" href="#/client/${encodeURIComponent(c.id)}">Open</a></td></tr>`).join('')}</table></div>`
+      : '<div class="empty">No clients yet. Facts appear here after an engagement is signed off.</div>'}`;
+}
+async function clientView(cid) {
+  let filter = 'pending';
+  const draw = async () => {
+    const [facts, clients] = await Promise.all([api(`/clients/${encodeURIComponent(cid)}/facts`), api('/clients')]);
+    refreshNav();
+    const c = clients.find(x => x.id === cid) || {name: cid};
+    const counts = {pending:0, active:0, rejected:0}; facts.forEach(f => counts[f.status]++);
+    const shown = facts.filter(f => f.status === filter);
+    const t = SETTINGS ? `Facts at ${SETTINGS.fact_auto_save_threshold} confidence or higher are saved active; ${SETTINGS.fact_review_threshold} to ${SETTINGS.fact_auto_save_threshold} wait here; lower ones are dropped.` : '';
+    $('#view').innerHTML = `<div class="head"><div><a href="#/memory" class="back">← Brand memory</a><div class="dnum" style="margin-top:8px">Client</div><h2>${esc(c.name)}</h2><p class="sub2">${t}</p></div></div>
+      <div class="card"><div class="tabs">${['pending','active','rejected'].map(s => `<button data-f="${s}" class="${s === filter ? 'on' : ''}">${s[0].toUpperCase() + s.slice(1)} (${counts[s]})</button>`).join('')}</div>
+      ${shown.length ? `<table><tr><th>Category</th><th>Fact</th><th>Confidence</th><th>Source</th><th></th></tr>
+        ${shown.map(f => `<tr><td><span class="pill">${esc(f.category)}</span></td><td>${esc(f.statement)}<div class="hint">${esc(f.evidence)}</div></td>
+          <td>${Math.round(f.confidence * 100)}%</td><td class="muted">${esc(f.source.replace(/_/g, ' '))}</td>
+          <td><div class="row">${f.status !== 'active' ? `<button data-id="${f.id}" data-s="active">Confirm</button>` : ''}${f.status !== 'rejected' ? `<button class="danger" data-id="${f.id}" data-s="rejected">Reject</button>` : ''}</div></td></tr>`).join('')}</table>`
+        : `<div class="empty">No ${filter} facts.</div>`}</div>`;
+    document.querySelectorAll('[data-f]').forEach(b => b.onclick = () => { filter = b.dataset.f; draw(); });
+    document.querySelectorAll('[data-s]').forEach(b => b.onclick = async () => {
+      await api(`/facts/${b.dataset.id}/review`, {method:'POST', body:JSON.stringify({status:b.dataset.s})});
+      toast(b.dataset.s === 'active' ? 'Fact confirmed' : 'Fact rejected; it will not come back'); draw();
+    });
+  };
+  await draw();
+}
+
+// ------------------------------------------------------------------ how it works
+function how() {
+  const cps = (SETTINGS?.checkpoints || []).map(c => CP_LABEL[c]).join(', ');
+  $('#view').innerHTML = `<div class="head"><div><div class="dnum">04 · How it works</div><h2>The pipeline</h2><p class="sub2">Six specialists, three human checkpoints, one QA gate.</p></div></div>
+    <div class="grid" style="grid-template-columns:repeat(auto-fill,minmax(260px,1fr))">
+      <div class="card"><h3>1. Research Analyst</h3><p>Sizes up the market, audience, competitors and regulations, then asks the client a few questions, each with a recommended answer.</p></div>
+      <div class="card"><h3>2. Brand Strategist</h3><p>Writes the positioning, promise and 3-5 pillars, each traced to research, the client's answers or stored facts.</p></div>
+      <div class="card"><h3>3. Messaging Lead</h3><p>Taglines, elevator pitch, key messages per pillar, tone of voice and sample copy for real channels.</p></div>
+      <div class="card"><h3>4. Identity Direction</h3><p>Palette, role tokens, typography, logo direction, imagery and packaging notes, exported as a ready-to-build design system.</p></div>
+      <div class="card"><h3>5. Report Producer</h3><p>Assembles the approved work into one client-ready report.</p></div>
+      <div class="card"><h3>6. QA Reviewer</h3><p>Checks the report against the brief, brand facts and compliance rules. Issues go back to the agent that owns them.</p></div>
+    </div>
+    <div class="card" style="margin-top:16px"><h3>Your checkpoints</h3><p>Currently on: ${esc(cps)}. Max QA revisions: ${SETTINGS?.max_qa_revisions}. After final sign-off, a smaller model saves durable brand facts for the client's next engagement.</p>
+      ${SETTINGS?.demo ? '<p><span class="pill warn">Demo mode</span> Agents return sample output for any brief.</p>' : ''}</div>`;
+}
+
+// ------------------------------------------------------------------ boot
+(async () => {
+  try { SETTINGS = await api('/settings'); } catch {}
+  if (SETTINGS) $('#foot').innerHTML = `${SETTINGS.demo ? '<span class="pill warn">Demo mode</span><br>' : ''}Storage: ${esc(SETTINGS.storage)}`;
+  route();
+})();
+</script>
+</body>
+</html>

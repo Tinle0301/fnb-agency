@@ -409,6 +409,7 @@ class Orchestrator:
         return await self._timed(run, agent, await self._context(run, feedback))
 
     async def _timed(self, run: Run, agent: Agent, ctx: AgentContext) -> AgentResult:
+        await self._event(run, "agent.started", detail={"agent": agent.name})
         result = await agent.run(ctx)
         run.usage["input_tokens"] += result.llm.input_tokens
         run.usage["output_tokens"] += result.llm.output_tokens

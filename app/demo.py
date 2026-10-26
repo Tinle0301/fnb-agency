@@ -1,4 +1,4 @@
-"""Demo mode: canned outputs instead of the model API, to click through the console for free.
+"""Demo mode: canned outputs instead of the model API, to click through the dashboard for free.
 
 AGENCY_DEMO=1 makes every agent return the Harbor Hops golden fixtures whatever the brief
 says, so use it to learn the workflow, never to judge output quality.

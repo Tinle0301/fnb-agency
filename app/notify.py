@@ -18,7 +18,7 @@ class Notifier:
     def __init__(self, webhook_url: str | None = None, public_base_url: str = "") -> None:
         self.webhook_url = webhook_url
         self.public_base_url = public_base_url.rstrip("/")
-        self.sent: list[dict] = []  # kept for tests and the dev console
+        self.sent: list[dict] = []  # kept for tests and local debugging
 
     async def needs_you(self, *, run_id: str, client_name: str, reason: str) -> None:
         link = f"{self.public_base_url}/runs/{run_id}" if self.public_base_url else f"run {run_id}"

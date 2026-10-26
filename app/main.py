@@ -26,6 +26,7 @@ from app.orchestrator import (
 from app.schemas import (
     BrandFact,
     ClientAnswer,
+    ClientSummary,
     ClientBrief,
     Decision,
     FactStatus,
@@ -131,8 +132,8 @@ def create_app(orchestrator: Orchestrator | None = None, settings: Settings | No
             raise HTTPException(404, f"run {run_id} not found")
 
     @app.get("/", include_in_schema=False)
-    async def console() -> FileResponse:
-        return FileResponse(STATIC_DIR / "console.html")
+    async def dashboard() -> FileResponse:
+        return FileResponse(STATIC_DIR / "dashboard.html")
 
     @app.get("/healthz")
     async def healthz() -> dict[str, str]:
@@ -214,6 +215,23 @@ def create_app(orchestrator: Orchestrator | None = None, settings: Settings | No
             media_type="application/zip",
             headers={"Content-Disposition": f'attachment; filename="{slug}-design-system.zip"'},
         )
+
+    @app.get("/settings")
+    async def public_settings(o: Orchestrator = Depends(orch)) -> dict[str, Any]:
+        """Workflow settings the dashboard shows (no secrets, no model IDs)."""
+        s = o.settings
+        return {
+            "checkpoints": sorted(s.checkpoints),
+            "max_qa_revisions": s.max_qa_revisions,
+            "fact_auto_save_threshold": s.fact_auto_save_threshold,
+            "fact_review_threshold": s.fact_review_threshold,
+            "demo": s.demo,
+            "storage": s.storage,
+        }
+
+    @app.get("/clients", response_model=list[ClientSummary])
+    async def clients(o: Orchestrator = Depends(orch)) -> list[ClientSummary]:
+        return await o.memory.list_clients()
 
     @app.get("/clients/{client_id}/facts", response_model=list[BrandFact])
     async def client_facts(

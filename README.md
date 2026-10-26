@@ -1,118 +1,130 @@
 # F&B Virtual Agency
 
-A multi-agent brand agency for food and beverage clients. Six AI agents take a client brief to a finished brand report and a ready-to-build design system, with a person approving the work at each key step.
+A brand agency for food and beverage clients, run by six AI specialists and steered by you from one dashboard. Give it a client brief and it returns research, a brand strategy, messaging, a visual identity, a client-ready report and a design system your web developer can build from. Nothing moves forward until a person approves it.
 
-```
-brief ─► Research Analyst ─[research ✋]─► Brand Strategist ─[strategy ✋]─► Messaging Lead ┐
-                                                                             Identity Direction ┘
-      ─► Report Producer ⇄ automated checks + QA Reviewer ─[final ✋]─► fact extractor ─► Postgres
-```
-
-✋ = human checkpoint. QA issues go back to the agent that owns them (a bad tagline goes to the Messaging Lead, a contrast failure to Identity Direction) up to `MAX_QA_REVISIONS` times; if QA still fails, the run reaches the final checkpoint flagged so a person decides.
-
-## What's in it
-
-| Piece | Where |
+| Agent | What it hands you |
 |---|---|
-| FastAPI orchestrator and API | `app/main.py`, `app/orchestrator.py` |
-| Six agents (prompts + output schemas) | `app/agents/`, `app/schemas.py` |
-| Model API client (structured outputs, adaptive thinking, optional refusal fallback) | `app/llm.py` |
-| Session memory in Redis (run state, event log, TTL) | `app/memory/session.py` |
-| Brand facts and decision audit in Postgres | `app/memory/facts.py`, `migrations/` |
-| Fact extractor (smaller model) with confidence bands | `app/memory/extractor.py` |
-| Deterministic compliance and craft checks | `app/checks.py` |
-| Untrusted-text flagging for briefs and client answers | `app/untrusted.py` |
-| Structured JSON logging | `app/logging_setup.py` |
-| Report and OpenDesign design-system export | `app/exports.py` |
-| Review console | `app/static/console.html` (served at `/`) |
-| Per-agent evaluations | `evals/` |
-| Tests | `tests/` |
+| Research Analyst | Market, audience insights, competitors, trends, regulatory notes, questions for the client |
+| Brand Strategist | Positioning, brand pillars, personality, promise |
+| Messaging Lead | Taglines, voice, key messages, menu and social copy |
+| Identity Direction | Palette, design tokens, typography, logo direction |
+| Report Producer | The client-facing brand report |
+| QA Reviewer | A score and a list of issues, sent back to whichever agent owns them |
 
-## Run it
+## 1. Start the dashboard
 
-Needs Python 3.11+ and Docker.
+You need Python 3.11 or newer.
+
+**Try it first in demo mode.** No API key and no databases. Every brief returns the same sample (Harbor Hops Brewing), so use it to learn the screens, not to judge the work.
 
 ```bash
-cp .env.example .env            # add your API key and the two model IDs
-docker compose up -d            # Redis + Postgres
 python -m venv .venv && source .venv/bin/activate
 pip install -e ".[dev]"
-uvicorn app.main:app --reload
-```
-
-Open http://localhost:8000 for the console, or http://localhost:8000/docs for the API.
-
-To click through the workflow without an API key or Docker:
-
-```bash
 AGENCY_DEMO=1 AGENCY_STORAGE=memory uvicorn app.main:app
 ```
 
-Demo mode returns the same Harbor Hops sample output for any brief, so use it to learn the flow, not to judge quality.
-
-## The workflow
-
-1. **Start a run**: `POST /runs` with a brief (the console's New run has a sample). The Research Analyst runs.
-2. **Research checkpoint**: review the findings and answer the clarifying questions. Each comes with a recommended answer; edit it to what the client said. Answers reach every later agent and become high-confidence brand facts.
-3. **Strategy checkpoint**: approve the positioning and pillars, or request changes with feedback (the stage re-runs with it).
-4. **Creative + report**: Messaging Lead and Identity Direction run in parallel, then the Report Producer, automated checks and QA Reviewer loop.
-5. **Final checkpoint**: read the report (`/runs/{id}/report.md`), the QA verdict, and download the design system (`/runs/{id}/design-system.zip`).
-6. **Facts**: on final approval, the extractor saves durable facts. Pending ones show in the console to confirm or reject; active ones are given to every agent in the client's next engagement.
-
-`POST /runs/{id}/decision` takes `{"checkpoint", "decision": "approve" | "request_changes" | "reject", "feedback", "answers"}`. A decision for a checkpoint that isn't open gets a 409, so a stale browser tab can't approve the wrong thing. Every decision is written to `checkpoint_decisions` in Postgres.
-
-`GET /runs` returns the board: `needs_you`, `working`, `done`. Set `NOTIFY_WEBHOOK_URL` (a Slack incoming webhook works) to be pinged when a run needs you.
-
-## Memory
-
-- **Redis (short-term)**: run state and event log under `agency:run:*`, expiring after `SESSION_TTL_SECONDS` (7 days).
-- **Postgres (long-term)**: `clients`, `brand_facts`, `checkpoint_decisions`. Migrations run on startup.
-- **Fact bands**: confidence ≥ 0.85 is saved active, 0.60–0.85 pending for a person, below 0.60 dropped. Re-extraction never downgrades a fact, and rejected facts are never re-added. Set `APPROVED_OUTPUT_CONFIDENCE_CAP=0.8` to make a person confirm every fact worded by an agent once.
-
-## Quality gates
-
-Automated checks (`app/checks.py`) run before the QA Reviewer, and any blocker fails QA regardless of the model's verdict:
-
-- health, medical and nutrition claims ("boosts immunity", "detox", "clinically proven")
-- alcohol copy that appeals to minors, for breweries, wineries, bars and similar
-- placeholders (`[TBD]`, lorem ipsum)
-- invalid hex colors; WCAG contrast for text, muted text and accent buttons
-- unsourced metrics and awards ("#1", "10x", "award-winning") as major issues
-- default-AI indigo accents
-
-The QA Reviewer adds judgment: consistency with brand facts and client answers, messaging that matches the strategy pillars, tone, and claims not supported by the deliverables.
-
-## Design system export
-
-The approved identity exports as an [OpenDesign](https://github.com/nexu-io/open-design) design-system package: `manifest.json` (`od-design-system-project/v1`), `DESIGN.md` and role-named `tokens.css` (`--bg`, `--fg`, `--accent`, ...). Drop the folder into OpenDesign's `design-systems/`, or hand it to any coding agent, and the client's website is built from the brand they signed off.
-
-## Logging
-
-Every line is JSON on stdout, tagged with `run_id`, `client_id`, `stage` and `agent` when they apply. Key events: `run.created`, `stage.started/completed/failed`, `agent.started/completed/failed` (latency, tokens, served model), `qa.reviewed`, `qa.routed_revision`, `qa.escalated`, `checkpoint.opened/decided`, `facts.saved`, `fact.dropped`, `untrusted.instruction_like`, `notify.needs_you`.
+**Run it for real.** This also needs Docker for Redis and Postgres.
 
 ```bash
-uvicorn app.main:app | jq 'select(.run_id=="<id>")'
+cp .env.example .env      # add your API key and the two model IDs
+docker compose up -d      # Redis (session memory) + Postgres (brand memory)
+uvicorn app.main:app
 ```
 
-## Tests and evaluations
+Open **http://localhost:8000**. The header says "Demo mode" when you are in demo mode, and shows which storage the dashboard is using.
+
+## 2. Find your way around
+
+The dark bar under the header has four tabs:
+
+- **Overview**: every engagement, sorted into what needs you.
+- **New engagement**: the client brief form.
+- **Brand memory**: what the agency has learned about each client.
+- **How it works**: the pipeline and the quality rules, for new team members.
+
+A number next to a tab shows how much is waiting for you: engagements to review next to Overview, facts to confirm next to Brand memory. The dashboard refreshes on its own every few seconds, and pauses while you are typing.
+
+## 3. Start an engagement
+
+1. Click **New engagement**.
+2. Fill in the brief: client name, business type, location, audience, goals, constraints, competitors and any notes. Click **Fill with sample brief** to see a complete one.
+3. The client ID is filled in from the name. Keep it the same for every engagement with the same client, because that is how brand memory follows the client.
+4. Click **Start engagement**. You land on the engagement page, and the Research Analyst starts straight away.
+
+Write the brief the way the client said it. Text that reads like instructions to the AI ("ignore your rules…") is flagged and treated as client content, never as commands.
+
+## 4. Follow an engagement
+
+Each engagement page has:
+
+- **The pipeline**: one step per agent and per checkpoint (✋). Green is done, blue is working, brown is waiting for you, red is failed.
+- **A banner** that says what is happening now and what, if anything, you need to do.
+- **Deliverables**: the work so far, one tab per deliverable.
+- **Downloads**: the brand report (Markdown) and the design system (.zip), once they exist.
+- **Brief** and **Activity**: the original brief, the client's answers, and a timestamped log of every step.
+
+If an agent fails, the banner says why. Click **Retry stage** to run that stage again.
+
+## 5. Review at each checkpoint
+
+When a checkpoint opens, the engagement moves to **Needs you** on the Overview and a review card appears at the top of the page. You have three choices:
+
+- **Approve and continue**: the next agents start.
+- **Request changes**: write what to change in **Feedback** (it is required). The stage runs again with your note.
+- **Reject**: the engagement stops.
+
+The checkpoints, in order:
+
+1. **Research review.** Read the findings and answer the **Questions for the client**. Each comes with a recommended answer; change it to what the client actually said. Every later agent sees these answers, and they are saved as facts about the client.
+2. **Strategy review.** Check the positioning and pillars. Everything after this point is built on them.
+3. **Final sign-off.** Messaging and identity run side by side, then the Report Producer writes the report and QA reviews everything. Read the **Report**, **QA**, **Messaging** and **Identity** tabs. The Identity tab shows the palette, a live preview built from the design tokens and the contrast ratio of every text pair.
+
+If QA finds a problem, the issue goes back to the agent that owns it (a weak tagline to the Messaging Lead, a contrast failure to Identity Direction) and the report is rebuilt. If QA still fails after the set number of revisions, the final checkpoint opens with a red **QA did not pass** banner, so you decide with the issues in front of you.
+
+## 6. Hand off the work
+
+After final sign-off, the **Deliverables** card gives you:
+
+- **Brand report (Markdown)**: ready to paste into a deck or doc for the client.
+- **Design system (.zip)**: `DESIGN.md`, `tokens.css` and `manifest.json` in the [OpenDesign](https://github.com/nexu-io/open-design) format. Give it to the person or tool building the client's website so the site uses exactly the brand the client signed off.
+
+## 7. Keep brand memory accurate
+
+When you give final sign-off, the agency pulls lasting facts out of the engagement ("founders are former lobstermen", "never use anchors") and gives each one a confidence score.
+
+- **High confidence** facts are saved as **active**. Every agent sees them in the client's next engagement.
+- **Medium confidence** facts are saved as **pending** and wait for you.
+- **Low confidence** facts are dropped.
+
+Open **Brand memory**, pick a client, and use the **Pending** tab to **Confirm** or **Reject** each fact. A rejected fact is never added back automatically. The **Active** and **Rejected** tabs show what the agency currently knows and what you ruled out.
+
+## 8. Settings you may want
+
+Set these in `.env`:
+
+| Setting | What it does |
+|---|---|
+| `AGENCY_CHECKPOINTS` | Which reviews open, for example `research,strategy,final`. Add `creative` to review messaging and identity before the report. Final sign-off is always on. |
+| `MAX_QA_REVISIONS` | How many times QA can send work back before it escalates to you. Default 2. |
+| `NOTIFY_WEBHOOK_URL` | A Slack incoming webhook (or any webhook) to ping you when an engagement needs you. |
+| `PUBLIC_BASE_URL` | The dashboard's address, used for links in those pings. |
+| `FACT_AUTO_SAVE_THRESHOLD`, `FACT_REVIEW_THRESHOLD` | The confidence bands for brand memory (defaults 0.85 and 0.60). |
+| `APPROVED_OUTPUT_CONFIDENCE_CAP` | Set to `0.8` to make you confirm every fact the agents worded themselves at least once. |
+
+`.env.example` lists every setting.
+
+## Before you use it with real clients
+
+- The dashboard has no login, and anyone who can open it can approve work. Keep it on your own machine or put it behind authentication.
+- Run the agent evaluations and read the failures: `python -m evals.run --trials 3`. They call the API and cost credits.
+- Run one API worker. The lock that stops two people approving the same step at once is per process.
+
+## For developers
 
 ```bash
-pytest                                  # 73 offline tests, fake model, no services
-INTEGRATION=1 pytest -m integration     # same engagement against real Redis + Postgres
-python -m evals.run                     # live per-agent evals (calls the API, costs credits)
-python -m evals.run --agent qa --trials 3
-python -m evals.run --model <model-id>
+pytest                                  # offline tests, fake model, no services
+INTEGRATION=1 pytest -m integration     # against real Redis and Postgres
+python -m evals.run --agent qa          # live evaluation of one agent
 ```
 
-The offline suite covers checkpoint order, change requests, reject, answers reaching later agents, QA routing and escalation, fact bands, facts feeding the next engagement, failure and retry, the decision audit, prompt-injection flagging, the HTTP API and the design-system export.
-
-Each agent has graders in `evals/graders.py` (for example: research covers every named competitor; messaging maps to the strategy pillars and has no compliance blockers; identity meets contrast minimums; QA catches a planted health claim and a planted invented statistic; the extractor auto-saves stated facts and not speculation). `tests/test_graders.py` proves each grader passes the golden outputs and fails planted defects before it's trusted on live output. Live results are written to `evals/results/`.
-
-## Before live clients
-
-- Run `python -m evals.run --trials 3` and read the failures; this repo's live evals have not been run yet.
-- Put the API behind authentication. It has none, and the console can approve work.
-- The run lock is per process. Run a single API worker, or move the lock to Redis before scaling out.
-- Read `docs/adr/` for why things are the way they are.
-
-Credits for adapted ideas are in `THIRD_PARTY_NOTICES.md`.
+The API behind the dashboard is documented at http://localhost:8000/docs. Code layout, logging and design decisions are in `AGENTS.md`, `GLOSSARY.md` and `docs/adr/`. Credits for adapted ideas are in `THIRD_PARTY_NOTICES.md`.

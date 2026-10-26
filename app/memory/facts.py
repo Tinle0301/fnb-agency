@@ -11,7 +11,7 @@ import re
 from pathlib import Path
 from typing import Protocol
 
-from app.schemas import BrandFact, FactStatus
+from app.schemas import BrandFact, ClientSummary, FactStatus
 
 MIGRATIONS_DIR = Path(__file__).resolve().parents[2] / "migrations"
 
@@ -23,6 +23,7 @@ def statement_key(statement: str) -> str:
 
 class BrandMemory(Protocol):
     async def ensure_client(self, client_id: str, name: str) -> None: ...
+    async def list_clients(self) -> list[ClientSummary]: ...
     async def get_facts(self, client_id: str, status: FactStatus | None = None) -> list[BrandFact]: ...
     async def save_facts(self, facts: list[BrandFact]) -> None: ...
     async def set_fact_status(self, fact_id: int, status: FactStatus) -> BrandFact | None: ...
@@ -60,6 +61,20 @@ class PostgresBrandMemory:
                 "ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name",
                 (client_id, name),
             )
+
+    async def list_clients(self) -> list[ClientSummary]:
+        async with self._pool.connection() as conn:
+            cur = await conn.execute(
+                """
+                SELECT c.id, c.name,
+                       count(f.id) FILTER (WHERE f.status = 'active'),
+                       count(f.id) FILTER (WHERE f.status = 'pending')
+                FROM clients c LEFT JOIN brand_facts f ON f.client_id = c.id
+                GROUP BY c.id, c.name ORDER BY c.name
+                """
+            )
+            rows = await cur.fetchall()
+        return [ClientSummary(id=r[0], name=r[1], active_facts=r[2], pending_facts=r[3]) for r in rows]
 
     async def get_facts(self, client_id: str, status: FactStatus | None = None) -> list[BrandFact]:
         query = (
@@ -157,6 +172,17 @@ class InMemoryBrandMemory:
 
     async def ensure_client(self, client_id: str, name: str) -> None:
         self.clients[client_id] = name
+
+    async def list_clients(self) -> list[ClientSummary]:
+        def count(cid: str, status: FactStatus) -> int:
+            return sum(1 for f in self.facts.values() if f.client_id == cid and f.status == status)
+
+        return [
+            ClientSummary(
+                id=cid, name=name, active_facts=count(cid, FactStatus.active), pending_facts=count(cid, FactStatus.pending)
+            )
+            for cid, name in sorted(self.clients.items(), key=lambda kv: kv[1])
+        ]
 
     async def get_facts(self, client_id: str, status: FactStatus | None = None) -> list[BrandFact]:
         facts = [

@@ -91,5 +91,21 @@ def test_failed_run_can_be_retried(client, llm):
     assert client.get(f"/runs/{run_id}").json()["open_checkpoint"] == "research"
 
 
-def test_console_is_served(client):
-    assert "Agency Console" in client.get("/").text
+def test_dashboard_is_served(client):
+    assert "Agency Dashboard" in client.get("/").text
+
+
+def test_settings_tell_the_dashboard_which_checkpoints_exist(client):
+    body = client.get("/settings").json()
+    assert set(body["checkpoints"]) == {"research", "strategy", "final"}
+    assert body["max_qa_revisions"] >= 1
+
+
+def test_clients_list_counts_facts(client):
+    run_id = client.post("/runs", json=fx.BREWERY_BRIEF.model_dump()).json()["run"]["id"]
+    step(client, run_id, "research")
+    step(client, run_id, "strategy")
+    step(client, run_id, "final")
+    [summary] = client.get("/clients").json()
+    assert summary["id"] == fx.BREWERY_BRIEF.client_id
+    assert summary["active_facts"] + summary["pending_facts"] > 0
