@@ -1,0 +1,27 @@
+[project]
+name = "fnb-agency"
+version = "1.0.0"
+description = "Multi-agent virtual brand agency for food and beverage clients"
+requires-python = ">=3.11"
+dependencies = [
+    "anthropic>=2.3",
+    "fastapi>=0.115",
+    "uvicorn[standard]>=0.30",
+    "pydantic>=2.8",
+    "redis>=5.0",
+    "psycopg[binary]>=3.2",
+    "psycopg-pool>=3.2",
+    "httpx>=0.27",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8", "pytest-asyncio>=0.24"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "strict"
+asyncio_default_fixture_loop_scope = "function"
+testpaths = ["tests"]
+markers = ["integration: needs running Redis and Postgres (docker compose up)"]
+
+[tool.setuptools.packages.find]
+include = ["app*", "evals*"]

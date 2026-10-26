@@ -1,0 +1,136 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Agency Console</title>
+<style>
+  :root { --bg:#f7f4ef; --surface:#fffdf9; --fg:#1f1a16; --muted:#6b5f55; --border:#e2d9cd; --accent:#8a4b2a; --accent-on:#fff; --warn:#a8641c; --danger:#a33a2f; --ok:#3f7a46; }
+  @media (prefers-color-scheme: dark) { :root { --bg:#141210; --surface:#1d1a17; --fg:#efe9e2; --muted:#a89c90; --border:#3a332d; --accent:#d98b5f; --accent-on:#1a120c; } }
+  * { box-sizing: border-box; }
+  body { margin:0; font:15px/1.5 system-ui, sans-serif; background:var(--bg); color:var(--fg); }
+  header { padding:16px 24px; border-bottom:1px solid var(--border); display:flex; gap:16px; align-items:baseline; }
+  header h1 { font-size:18px; margin:0; }
+  header span { color:var(--muted); }
+  main { display:grid; grid-template-columns: minmax(260px, 340px) 1fr; gap:24px; padding:24px; }
+  @media (max-width: 800px) { main { grid-template-columns: 1fr; padding:16px; } }
+  .lane h2 { font-size:13px; text-transform:uppercase; letter-spacing:.06em; color:var(--muted); margin:16px 0 8px; }
+  .card { background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:12px 14px; margin-bottom:8px; cursor:pointer; }
+  .card.sel { outline:2px solid var(--accent); }
+  .card small { color:var(--muted); display:block; }
+  section.detail { background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:20px; min-height:300px; }
+  pre { white-space:pre-wrap; word-break:break-word; background:var(--bg); padding:12px; border-radius:8px; font-size:13px; max-height:420px; overflow:auto; }
+  button { font:inherit; border-radius:8px; border:1px solid var(--border); background:var(--surface); color:var(--fg); padding:8px 14px; cursor:pointer; }
+  button.primary { background:var(--accent); color:var(--accent-on); border-color:var(--accent); }
+  button.danger { color:var(--danger); }
+  textarea, input { font:inherit; width:100%; padding:8px; border-radius:8px; border:1px solid var(--border); background:var(--bg); color:var(--fg); }
+  .row { display:flex; gap:8px; flex-wrap:wrap; margin-top:12px; }
+  .q { margin:12px 0; }
+  .q label { font-weight:600; display:block; }
+  .q small { color:var(--muted); display:block; margin-bottom:4px; }
+  .pill { font-size:12px; padding:2px 8px; border-radius:999px; border:1px solid var(--border); }
+  .bad { color:var(--danger); } .good { color:var(--ok); }
+  details { margin:8px 0; }
+  a { color:var(--accent); }
+  form.new textarea { min-height:220px; font-family: ui-monospace, monospace; font-size:13px; }
+</style>
+</head>
+<body>
+<header><h1>Agency Console</h1><span>Runs that need you are listed first.</span></header>
+<main>
+  <div>
+    <button class="primary" onclick="showNew()">New run</button>
+    <div id="board"></div>
+  </div>
+  <section class="detail" id="detail"><p>Select a run, or start a new one.</p></section>
+</main>
+<script>
+const api = (path, opts={}) => fetch(path, {headers:{'Content-Type':'application/json'}, ...opts}).then(async r => {
+  const body = r.headers.get('content-type')?.includes('json') ? await r.json() : await r.text();
+  if (!r.ok) throw new Error(body.detail || body);
+  return body;
+});
+const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+let selected = null;
+const LANES = {needs_you:'Needs you', working:'Working', done:'Done'};
+const REVIEW_KEYS = {research:['research'], strategy:['strategy'], creative:['messaging','identity'], final:['report','qa']};
+
+async function loadBoard() {
+  const lanes = await api('/runs');
+  document.getElementById('board').innerHTML = Object.entries(LANES).map(([z, label]) =>
+    `<div class="lane"><h2>${label} (${lanes[z].length})</h2>` +
+    lanes[z].map(v => `<div class="card ${v.run.id===selected?'sel':''}" onclick="openRun('${v.run.id}')">
+      <b>${esc(v.run.brief.client_name)}</b>
+      <small>${esc(v.run.brief.business_type)} · ${v.open_checkpoint ? 'review ' + v.open_checkpoint : v.run.status}</small></div>`).join('') +
+    `</div>`).join('');
+}
+
+async function openRun(id) {
+  selected = id;
+  const v = await api('/runs/' + id);
+  const r = v.run, cp = v.open_checkpoint;
+  let html = `<h2>${esc(r.brief.client_name)} <span class="pill">${r.status}</span></h2>
+    <p>${esc(r.brief.business_type)}, ${esc(r.brief.location)} · stage ${r.stage} · tokens in ${r.usage.input_tokens} / out ${r.usage.output_tokens}</p>`;
+  if (r.error) html += `<p class="bad">Error: ${esc(r.error)} <button onclick="retry('${id}')">Retry stage</button></p>`;
+  if (cp) {
+    html += `<h3>Review: ${cp}</h3>`;
+    if (cp === 'final') {
+      const qa = r.outputs.qa;
+      html += `<p class="${qa.gate_passed?'good':'bad'}">QA ${qa.gate_passed?'passed':'did not pass'} after ${qa.attempts} attempt(s), score ${qa.score}/10. ${esc(qa.summary)}</p>`;
+      if (qa.issues.length) html += '<ul>' + qa.issues.map(i => `<li><b>${i.severity}</b> ${esc(i.location)}: ${esc(i.problem)}</li>`).join('') + '</ul>';
+      html += `<p><a href="/runs/${id}/report.md" target="_blank">Open report (Markdown)</a> · <a href="/runs/${id}/design-system.zip">Download design system</a></p>`;
+    }
+    for (const k of REVIEW_KEYS[cp]) html += `<details ${cp!=='final'?'open':''}><summary>${k}</summary><pre>${esc(JSON.stringify(r.outputs[k], null, 2))}</pre></details>`;
+    if (cp === 'research' && r.outputs.research.open_questions.length) {
+      html += '<h3>Clarifying questions</h3><p>Edit the recommended answers to match what the client says.</p>' +
+        r.outputs.research.open_questions.map((q, n) => `<div class="q"><label>${n+1}. ${esc(q.question)}</label>
+          <small>${esc(q.why_it_matters)}</small><input data-q="${esc(q.question)}" value="${esc(q.recommended_answer)}"></div>`).join('');
+    }
+    html += `<textarea id="feedback" rows="3" placeholder="Feedback (required for Request changes)"></textarea>
+      <div class="row"><button class="primary" onclick="decide('${id}','${cp}','approve')">Approve</button>
+      <button onclick="decide('${id}','${cp}','request_changes')">Request changes</button>
+      <button class="danger" onclick="decide('${id}','${cp}','reject')">Reject</button></div>`;
+  } else if (r.status === 'completed') {
+    html += `<p class="good">Completed. Facts saved: ${r.outputs.facts.active} active, ${r.outputs.facts.pending} pending review, ${r.outputs.facts.dropped} dropped.</p>
+      <p><a href="/runs/${id}/report.md" target="_blank">Open report</a> · <a href="/runs/${id}/design-system.zip">Download design system</a></p>`;
+  } else if (r.status === 'running') {
+    html += '<p>Agents are working. This page refreshes on its own.</p>';
+  }
+  const pending = await api(`/clients/${encodeURIComponent(r.brief.client_id)}/facts?status=pending`);
+  if (pending.length) {
+    html += '<h3>Facts waiting for review</h3>' + pending.map(f => `<div class="q">[${f.category}] ${esc(f.statement)} <small>confidence ${f.confidence} · ${esc(f.evidence)}</small>
+      <div class="row"><button onclick="reviewFact(${f.id},'active')">Confirm</button><button class="danger" onclick="reviewFact(${f.id},'rejected')">Reject</button></div></div>`).join('');
+  }
+  document.getElementById('detail').innerHTML = html;
+  loadBoard();
+}
+
+async function decide(id, checkpoint, decision) {
+  const answers = [...document.querySelectorAll('input[data-q]')].map(i => ({question:i.dataset.q, answer:i.value}));
+  const feedback = document.getElementById('feedback').value;
+  try { await api(`/runs/${id}/decision`, {method:'POST', body:JSON.stringify({checkpoint, decision, feedback, answers})}); }
+  catch (e) { alert(e.message); }
+  openRun(id);
+}
+async function retry(id) { await api(`/runs/${id}/retry`, {method:'POST'}); openRun(id); }
+async function reviewFact(fid, status) { await api(`/facts/${fid}/review`, {method:'POST', body:JSON.stringify({status})}); openRun(selected); }
+
+const SAMPLE = {client_id:"harbor-hops", client_name:"Harbor Hops Brewing", business_type:"craft brewery and taproom", location:"Portland, Maine",
+  target_audience:"locals 25-45 who value small-batch beer and waterfront hangouts", goals:["Rebrand ahead of canning launch","Stand out from tourist-trap breweries"],
+  constraints:["Keep the name","Budget for one photo shoot"], competitors:["Allagash","Bissell Brothers"], products:["Hazy IPA","Sea Salt Gose"], notes:""};
+function showNew() {
+  selected = null;
+  document.getElementById('detail').innerHTML = `<h2>New run</h2><form class="new" onsubmit="startRun(event)">
+    <p>Client brief as JSON:</p><textarea id="brief">${esc(JSON.stringify(SAMPLE, null, 2))}</textarea>
+    <div class="row"><button class="primary">Start</button></div></form>`;
+}
+async function startRun(e) {
+  e.preventDefault();
+  try { const v = await api('/runs', {method:'POST', body:document.getElementById('brief').value}); openRun(v.run.id); }
+  catch (err) { alert(err.message); }
+}
+loadBoard();
+setInterval(() => { selected && document.activeElement?.tagName !== 'TEXTAREA' && document.activeElement?.tagName !== 'INPUT' ? openRun(selected) : loadBoard(); }, 5000);
+</script>
+</body>
+</html>
