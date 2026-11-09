@@ -13,6 +13,7 @@ from app.schemas import (
     ClientBrief,
     ExtractedFact,
     FactExtraction,
+    IdentityDirections,
     IdentityOutput,
     MessagingOutput,
     QAOutput,
@@ -156,6 +157,7 @@ BREWERY_MESSAGING = MessagingOutput(
 )
 
 BREWERY_IDENTITY = IdentityOutput(
+    direction_name="Tide Line",
     visual_direction_summary="Weathered maritime utility: tide charts, rope, salt-faded paint on the pier.",
     mood_keywords=["salt-worn", "steady", "utilitarian", "warm"],
     symbol_logic="Working waterfront and tide map to a buoy and tide line; Maine grain maps to a barley ear.",
@@ -177,6 +179,18 @@ BREWERY_IDENTITY = IdentityOutput(
         "warn": "#A8641C",
         "danger": "#A33A2F",
     },
+    dark_tokens={
+        "bg": "#121A19",
+        "surface": "#1B2624",
+        "fg": "#F3EDE2",
+        "muted": "#A9B3AE",
+        "border": "#2E3B38",
+        "accent": "#5FA8A3",
+        "accent_on": "#0E1514",
+        "success": "#7DBA84",
+        "warn": "#E0A458",
+        "danger": "#E57F72",
+    },
     typography={
         "display": "Fraunces",
         "body": "IBM Plex Sans",
@@ -187,6 +201,70 @@ BREWERY_IDENTITY = IdentityOutput(
     imagery_style="Early-morning pier light, hands at work, cans on weathered wood; no stock lighthouse shots.",
     packaging_and_signage_notes="Beer name in display face at top third of the 16oz sleeve; keep the TTB panel clear.",
     anti_patterns=["Pirate and anchor clichés", "Bissell-style neon hype graphics"],
+)
+
+# Two alternatives the Identity Director offers next to Tide Line (the recommended one).
+BREWERY_IDENTITY_SIGNAL = IdentityOutput.model_validate(
+    BREWERY_IDENTITY.model_dump()
+    | {
+        "direction_name": "Signal Flag",
+        "visual_direction_summary": "Bold nautical signal flags: flat blocks of color, crisp geometry, loud on the shelf.",
+        "mood_keywords": ["bold", "graphic", "confident", "playful"],
+        "symbol_logic": "Harbor communication maps to signal flags; each beer gets its own flag pattern.",
+        "color_palette": [
+            {"name": "Flag Red", "hex": "#B8322A", "rationale": "Signal flag red; the single accent."},
+            {"name": "Chart Paper", "hex": "#F4F0E6", "rationale": "Nautical chart paper backgrounds."},
+            {"name": "Navy Ink", "hex": "#1B2433", "rationale": "Chart ink for type."},
+            {"name": "Brass", "hex": "#B58A3C", "rationale": "Ship brass for small details."},
+        ],
+        "tokens": BREWERY_IDENTITY.tokens.model_dump()
+        | {"bg": "#F4F0E6", "fg": "#1B2433", "accent": "#B8322A", "accent_on": "#FFFDF8", "border": "#DCD4C2"},
+        "dark_tokens": BREWERY_IDENTITY.dark_tokens.model_dump()
+        | {"bg": "#131A26", "surface": "#1C2533", "accent": "#E4675C", "accent_on": "#131A26"},
+        "typography": {
+            "display": "Archivo Black",
+            "body": "Archivo",
+            "rationale": "Heavy grotesque reads like stenciled hull numbers; one family keeps it tight.",
+        },
+        "logo_concept_method": "construction_geometry",
+        "logo_direction": "A square signal flag split on the diagonal into an H; prints as one color on cans.",
+    }
+)
+
+BREWERY_IDENTITY_GRAIN = IdentityOutput.model_validate(
+    BREWERY_IDENTITY.model_dump()
+    | {
+        "direction_name": "Grain and Rope",
+        "visual_direction_summary": "Hand-made and earthy: Maine grain, coiled rope, letterpress texture.",
+        "mood_keywords": ["handmade", "earthy", "quiet", "honest"],
+        "symbol_logic": "Maine grain and rope work map to a barley ear tied in a sailor's knot.",
+        "color_palette": [
+            {"name": "Malt Brown", "hex": "#7A4A24", "rationale": "Toasted malt; the single accent."},
+            {"name": "Oat", "hex": "#F3EBDD", "rationale": "Raw grain for backgrounds."},
+            {"name": "Peat", "hex": "#2A2320", "rationale": "Dark soil for type."},
+            {"name": "Kelp", "hex": "#4F6B4A", "rationale": "Seaweed green for small details."},
+        ],
+        "tokens": BREWERY_IDENTITY.tokens.model_dump()
+        | {"bg": "#F3EBDD", "fg": "#2A2320", "accent": "#7A4A24", "accent_on": "#FFFDF8", "border": "#DCCFBA"},
+        "dark_tokens": BREWERY_IDENTITY.dark_tokens.model_dump()
+        | {"bg": "#1A1512", "surface": "#251E1A", "accent": "#C99566", "accent_on": "#1A1512"},
+        "typography": {
+            "display": "Recoleta",
+            "body": "Source Sans 3",
+            "rationale": "A soft, warm serif feels hand-set; Source Sans keeps menus easy to read.",
+        },
+        "logo_concept_method": "monogram_meaning",
+        "logo_direction": "An HH monogram whose crossbars are a knotted rope around a barley ear.",
+    }
+)
+
+BREWERY_DIRECTIONS = IdentityDirections(
+    directions=[BREWERY_IDENTITY, BREWERY_IDENTITY_SIGNAL, BREWERY_IDENTITY_GRAIN],
+    recommended=0,
+    comparison=(
+        "Tide Line is the calm local on the pier and fits the strategy best. Signal Flag is louder and wins "
+        "on the shelf but drifts toward the tourist look. Grain and Rope leans on Maine grain over the water."
+    ),
 )
 
 BREWERY_REPORT = ReportOutput(
@@ -258,7 +336,8 @@ BREWERY_OUTPUTS = {
     ResearchOutput: BREWERY_RESEARCH,
     StrategyOutput: BREWERY_STRATEGY,
     MessagingOutput: BREWERY_MESSAGING,
-    IdentityOutput: BREWERY_IDENTITY,
+    IdentityDirections: BREWERY_DIRECTIONS,
+    IdentityOutput: BREWERY_IDENTITY,  # what the refiner returns
     ReportOutput: BREWERY_REPORT,
     QAOutput: QA_PASS,
     FactExtraction: BREWERY_FACTS,

@@ -14,6 +14,7 @@ from app import checks
 from app.schemas import (
     ClientBrief,
     FactExtraction,
+    IdentityDirections,
     IdentityOutput,
     MessagingOutput,
     QAOutput,
@@ -86,18 +87,43 @@ def grade_messaging(brief: ClientBrief, out: MessagingOutput, upstream: dict) ->
     ]
 
 
-def grade_identity(brief: ClientBrief, out: IdentityOutput, upstream: dict) -> list[Check]:
+def grade_identity(brief: ClientBrief, out: IdentityOutput | IdentityDirections, upstream: dict) -> list[Check]:
+    """One direction (the refiner), or the Identity Director's set of directions."""
+    if isinstance(out, IdentityDirections):
+        return grade_identity_directions(brief, out, upstream)
     findings = checks.check_identity(out)
-    contrast = [f for f in findings if "contrast" in f.problem]
+    contrast = [f for f in findings if "contrast" in f.problem and "dark theme" not in f.problem]
+    dark = [f for f in findings if f.location.startswith("identity.dark_tokens") and f.severity != "minor"]
     return [
         Check("valid hex everywhere", not [f for f in findings if "Invalid hex" in f.problem]),
         Check("3-7 palette colors", 3 <= len(out.color_palette) <= 7),
         Check("contrast minimums met", not contrast, "; ".join(f.problem for f in contrast)),
+        Check("dark theme is dark and legible", not dark, "; ".join(f.problem for f in dark)),
         Check("accent is not a default AI indigo", out.tokens.accent.upper() not in checks.AI_DEFAULT_ACCENTS),
         Check("display and body faces differ", out.typography.display.lower() != out.typography.body.lower()),
         Check("states symbol logic", len(out.symbol_logic.split()) >= 5),
         Check("lists anti-patterns", bool(out.anti_patterns)),
     ]
+
+
+def grade_identity_directions(brief: ClientBrief, out: IdentityDirections, upstream: dict) -> list[Check]:
+    findings = checks.check_directions(out)
+    accents = [d.tokens.accent.upper() for d in out.directions]
+    methods = {d.logo_concept_method for d in out.directions}
+    result = [
+        Check("2-3 directions", 2 <= len(out.directions) <= 3, str(len(out.directions))),
+        Check("recommendation is one of them", 0 <= out.recommended < len(out.directions)),
+        Check("directions differ in accent", len(set(accents)) == len(accents)),
+        Check("directions differ in logo method", len(methods) > 1),
+        Check("explains the choice", len(out.comparison.split()) >= 15),
+        Check("no blockers in any direction", not _blockers(findings), "; ".join(f.problem for f in _blockers(findings))),
+    ]
+    for i, direction in enumerate(out.directions):
+        result += [
+            Check(f"[{direction.direction_name or i}] {c.name}", c.passed, c.detail)
+            for c in grade_identity(brief, direction, upstream)
+        ]
+    return result
 
 
 def grade_report(brief: ClientBrief, out: ReportOutput, upstream: dict) -> list[Check]:

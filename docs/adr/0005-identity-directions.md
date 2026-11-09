@@ -1,0 +1,3 @@
+# Identity offers three directions and a person picks one
+
+A single identity direction left the strategist approving or rejecting one idea, and a rejection cost a full creative run. The Identity Director now returns three distinct directions with a recommendation, and the creative checkpoint (on by default) is where a person picks one. After the pick, feedback and QA issues refine that direction with a separate refiner prompt instead of exploring again, so the chosen idea is kept. Each direction carries light and dark color tokens, both held to the same contrast minimums. The production guideline (`BRAND_GUIDELINE.md`) is generated from the chosen direction without a model call, so it always matches the approved values.

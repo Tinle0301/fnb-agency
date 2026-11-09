@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import pytest
 
+from app import checks as app_checks
 from evals import fixtures as fx
 from evals.graders import GRADERS
 from evals.run import build_cases
@@ -24,6 +25,7 @@ GOLDEN = [
     ("strategy", fx.BREWERY_STRATEGY, {}),
     ("messaging", fx.BREWERY_MESSAGING, {"strategy": fx.BREWERY_STRATEGY}),
     ("identity", fx.BREWERY_IDENTITY, {}),
+    ("identity", fx.BREWERY_DIRECTIONS, {}),
     ("report", fx.BREWERY_REPORT, {"messaging": fx.BREWERY_MESSAGING}),
     ("qa", fx.QA_PASS, {"expect_pass": True}),
     ("qa", fx.QA_FAIL, {"expect_pass": False, "planted_location": "messaging"}),
@@ -83,6 +85,26 @@ def test_messaging_off_strategy_pillar_fails():
 def test_identity_defects_fail(tokens, check):
     out = fx.BREWERY_IDENTITY.model_copy(update={"tokens": fx.BREWERY_IDENTITY.tokens.model_copy(update=tokens)})
     assert check in failed(GRADERS["identity"](B, out, {}))
+
+
+@pytest.mark.parametrize(
+    "dark,problem",
+    [
+        ({"bg": "#F6F1E7"}, "is not dark"),
+        ({"muted": "#3A4441"}, "dark theme: muted on bg"),
+        ({"accent_on": "#5FA8A3"}, "dark theme: accent_on on accent"),
+    ],
+)
+def test_dark_theme_defects_fail(dark, problem):
+    tokens = fx.BREWERY_IDENTITY.dark_tokens.model_copy(update=dark)
+    out = fx.BREWERY_IDENTITY.model_copy(update={"dark_tokens": tokens})
+    assert "dark theme is dark and legible" in failed(GRADERS["identity"](B, out, {}))
+    assert any(problem in f.problem for f in app_checks.check_identity(out))
+
+
+def test_directions_that_are_not_distinct_fail():
+    same = fx.BREWERY_DIRECTIONS.model_copy(update={"directions": [fx.BREWERY_IDENTITY, fx.BREWERY_IDENTITY]})
+    assert "directions differ in accent" in failed(GRADERS["identity"](B, same, {}))
 
 
 def test_report_with_placeholder_fails():

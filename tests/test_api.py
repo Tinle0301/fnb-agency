@@ -36,6 +36,11 @@ def test_full_engagement_over_http(client):
 
     view = step(client, run_id, "research", answers=[{"question": "Locals first?", "answer": "Yes"}])
     view = step(client, run_id, "strategy")
+    assert view["open_checkpoint"] == "creative"
+    assert len(view["run"]["outputs"]["identity_directions"]["directions"]) == 3
+    view = step(client, run_id, "creative", direction=2)
+    assert view["run"]["chosen_direction"] == 2
+    assert view["run"]["outputs"]["identity"]["direction_name"] == "Grain and Rope"
     assert view["open_checkpoint"] == "final"
 
     report = client.get(f"/runs/{run_id}/report.md")
@@ -66,12 +71,19 @@ def test_design_system_export_is_an_opendesign_package(client):
     assert r.status_code == 200
     with zipfile.ZipFile(io.BytesIO(r.content)) as zf:
         names = set(zf.namelist())
-        assert names == {"harbor-hops-brewing/manifest.json", "harbor-hops-brewing/DESIGN.md", "harbor-hops-brewing/tokens.css"}
+        assert names == {
+            "harbor-hops-brewing/manifest.json",
+            "harbor-hops-brewing/DESIGN.md",
+            "harbor-hops-brewing/tokens.css",
+            "harbor-hops-brewing/BRAND_GUIDELINE.md",
+            "harbor-hops-brewing/SEO_BRIEF.md",
+        }
         manifest = json.loads(zf.read("harbor-hops-brewing/manifest.json"))
         tokens = zf.read("harbor-hops-brewing/tokens.css").decode()
         design = zf.read("harbor-hops-brewing/DESIGN.md").decode()
     assert manifest["schemaVersion"] == "od-design-system-project/v1" and manifest["id"] == "harbor-hops-brewing"
     assert "--accent: #1F5C5A;" in tokens
+    assert "prefers-color-scheme: dark" in tokens and "--bg: #121A19;" in tokens
     for heading in ("## 2. Color", "## 3. Typography", "## 8. Voice & Brand", "## 9. Anti-patterns"):
         assert heading in design
 
@@ -97,7 +109,7 @@ def test_dashboard_is_served(client):
 
 def test_settings_tell_the_dashboard_which_checkpoints_exist(client):
     body = client.get("/settings").json()
-    assert set(body["checkpoints"]) == {"research", "strategy", "final"}
+    assert set(body["checkpoints"]) == {"research", "strategy", "creative", "final"}
     assert body["max_qa_revisions"] >= 1
 
 
@@ -105,7 +117,38 @@ def test_clients_list_counts_facts(client):
     run_id = client.post("/runs", json=fx.BREWERY_BRIEF.model_dump()).json()["run"]["id"]
     step(client, run_id, "research")
     step(client, run_id, "strategy")
+    step(client, run_id, "creative")
     step(client, run_id, "final")
     [summary] = client.get("/clients").json()
     assert summary["id"] == fx.BREWERY_BRIEF.client_id
     assert summary["active_facts"] + summary["pending_facts"] > 0
+
+
+def test_brand_guideline_download(client):
+    run_id = client.post("/runs", json=fx.BREWERY_BRIEF.model_dump()).json()["run"]["id"]
+    assert client.get(f"/runs/{run_id}/brand-guideline.md").status_code == 404
+    step(client, run_id, "research")
+    step(client, run_id, "strategy")
+    guide = client.get(f"/runs/{run_id}/brand-guideline.md")
+    assert guide.status_code == 200
+    assert guide.text.startswith("# Harbor Hops Brewing: Brand Production Guideline")
+    assert "Tide Line" in guide.text and "#121A19" in guide.text
+
+
+def test_direction_out_of_range_is_a_conflict(client):
+    run_id = client.post("/runs", json=fx.BREWERY_BRIEF.model_dump()).json()["run"]["id"]
+    step(client, run_id, "research")
+    step(client, run_id, "strategy")
+    r = client.post(f"/runs/{run_id}/decision", json={"checkpoint": "creative", "decision": "approve", "direction": 7})
+    assert r.status_code == 409
+
+
+def test_seo_brief_download(client):
+    run_id = client.post("/runs", json=fx.BREWERY_BRIEF.model_dump()).json()["run"]["id"]
+    assert client.get(f"/runs/{run_id}/seo-brief.md").status_code == 404
+    step(client, run_id, "research")
+    step(client, run_id, "strategy")
+    seo = client.get(f"/runs/{run_id}/seo-brief.md")
+    assert seo.status_code == 200
+    assert seo.text.startswith("# Harbor Hops Brewing: SEO Starter Brief")
+    assert '"@type": "Brewery"' in seo.text and "Low Tide Hazy IPA Portland" in seo.text

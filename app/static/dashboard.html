@@ -120,6 +120,17 @@
   .preview .p-in { padding:22px 20px; display:grid; gap:12px; }
   .p-card { border-radius:10px; padding:14px; font-size:13.5px; }
   .p-btn { display:inline-block; margin-top:10px; padding:8px 14px; border-radius:8px; font-weight:700; font-size:12.5px; }
+  .dirs { display:grid; grid-template-columns:repeat(auto-fill, minmax(280px,1fr)); gap:12px; }
+  .dir { border:1px solid var(--line); border-radius:12px; padding:12px; background:#fff; display:grid; gap:10px; align-content:start; }
+  .dir.on { border-color:var(--brand); box-shadow:0 0 0 2px var(--brand); }
+  .dirs { margin-bottom:16px; }
+  .dir label.pick { display:flex; gap:8px; align-items:center; justify-content:flex-start; font-weight:700; cursor:pointer; text-transform:none; letter-spacing:0; font-size:14px; color:inherit; }
+  .dir label.pick input { width:auto; margin:0; flex:none; }
+  .themes .p-btn { white-space:nowrap; }
+  .dir .strip { display:flex; height:22px; border-radius:6px; overflow:hidden; border:1px solid var(--line); }
+  .dir .strip span { flex:1; }
+  .themes { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+  .themes .p-in { padding:14px 12px; gap:6px; }
   .swatches { display:grid; grid-template-columns:repeat(auto-fill, minmax(150px,1fr)); gap:10px; }
   .sw { border:1px solid var(--line); border-radius:10px; overflow:hidden; background:#fff; }
   .sw .c { height:64px; } .sw .i { padding:8px 10px; font-size:12px; } .sw code { font-size:11px; color:var(--ink2); }
@@ -193,13 +204,13 @@ function lum(hex) { const c = [1,3,5].map(i => parseInt(hex.slice(i, i+2), 16) /
 function contrast(a, b) { try { const [x, y] = [lum(a), lum(b)].sort((p, q) => q - p); return (x + .05) / (y + .05); } catch { return 0; } }
 
 // ------------------------------------------------------------------ state + router
-let SETTINGS = null, editing = false, timer = null, currentTab = {};
+let SETTINGS = null, editing = false, timer = null, currentTab = {}, pickedDirection = null;
 const AGENTS = {
   research_analyst:'Research Analyst', brand_strategist:'Brand Strategist', messaging_lead:'Messaging Lead',
   identity_direction:'Identity Direction', report_producer:'Report Producer', qa_reviewer:'QA Reviewer', fact_extractor:'Fact Extractor'
 };
 const CP_LABEL = {research:'Research review', strategy:'Strategy review', creative:'Creative review', final:'Final sign-off'};
-const REVIEW_TABS = {research:['research'], strategy:['strategy'], creative:['messaging','identity'], final:['report','qa','messaging','identity']};
+const REVIEW_TABS = {research:['research'], strategy:['strategy'], creative:['identity_directions','messaging'], final:['report','qa','messaging','identity']};
 
 function route() {
   editing = false; clearInterval(timer);
@@ -317,7 +328,7 @@ function pipeline(run, events, openCp) {
     if (e.kind === 'agent.completed') done[e.detail.agent] = (done[e.detail.agent] || 0) + 1;
     if (e.kind === 'checkpoint.decided') decided[e.detail.checkpoint] = e.detail.decision;
   }
-  const cps = new Set(SETTINGS?.checkpoints || ['research','strategy','final']);
+  const cps = new Set(SETTINGS?.checkpoints || ['research','strategy','creative','final']);
   const steps = [['a','research_analyst'],['c','research'],['a','brand_strategist'],['c','strategy'],['a','messaging_lead'],['a','identity_direction'],
     ['c','creative'],['a','report_producer'],['a','qa_reviewer'],['c','final'],['a','fact_extractor']];
   let n = 0;
@@ -370,26 +381,37 @@ const R = {
       <div class="sec"><h3>Sample copy</h3><div class="mini">${o.sample_copy.map(c => `<div><span class="hint">${esc(c.channel)}</span><div style="margin-top:4px">${esc(c.copy_text)}</div></div>`).join('')}</div></div>`;
   },
   identity(o) {
-    const t = o.tokens, fonts = [o.typography.display, o.typography.body];
+    const fonts = [o.typography.display, o.typography.body];
     loadFonts(fonts);
-    const r = (a, b, min) => { const v = contrast(a, b); return `<span class="ratio pill ${v >= min ? 'ok' : 'bad'}">${v.toFixed(1)}:1</span>`; };
-    return `<div class="sec"><h3>Direction</h3><p>${esc(o.visual_direction_summary)}</p>${chips(o.mood_keywords)}</div>
+    return `<div class="sec"><h3>Direction${o.direction_name ? `: ${esc(o.direction_name)}` : ''}</h3><p>${esc(o.visual_direction_summary)}</p>${chips(o.mood_keywords)}</div>
       <div class="sec"><h3>Symbol logic</h3><p>${esc(o.symbol_logic)}</p></div>
       <div class="sec"><h3>Palette</h3><div class="swatches">${o.color_palette.map(c => `<div class="sw"><div class="c" style="background:${esc(c.hex)}"></div>
         <div class="i"><b>${esc(c.name)}</b> <code>${esc(c.hex)}</code><div class="hint">${esc(c.rationale)}</div></div></div>`).join('')}</div></div>
-      <div class="sec"><h3>Live preview from the tokens</h3>
-        <div class="preview" style="background:${esc(t.bg)};color:${esc(t.fg)}"><div class="p-in">
-          <div style="font-family:'${esc(o.typography.display)}',Georgia,serif;font-size:26px;font-weight:600">Headline in ${esc(o.typography.display)}</div>
-          <div style="font-family:'${esc(o.typography.body)}',system-ui;color:${esc(t.muted)};margin-top:4px">Body and muted text in ${esc(o.typography.body)}.</div>
-          <div class="p-card" style="background:${esc(t.surface)};border:1px solid ${esc(t.border)};font-family:'${esc(o.typography.body)}',system-ui">
-            Menu card on the surface color.<br><span class="p-btn" style="background:${esc(t.accent)};color:${esc(t.accent_on)}">Order ahead</span></div>
-        </div></div>
-        <div class="row" style="margin-top:8px"><span class="hint">Contrast:</span> text ${r(t.fg, t.bg, 4.5)} muted ${r(t.muted, t.bg, 4.5)} button ${r(t.accent_on, t.accent, 4.5)} accent on bg ${r(t.accent, t.bg, 3)}</div></div>
+      <div class="sec"><h3>Live preview from the tokens</h3>${themePreview(o.tokens, o.typography, 'Light')}${contrastRow(o.tokens)}</div>
+      ${o.dark_tokens ? `<div class="sec"><h3>On dark backgrounds</h3>${themePreview(o.dark_tokens, o.typography, 'Dark')}${contrastRow(o.dark_tokens)}</div>` : ''}
       <div class="sec"><h3>Typography</h3><p><b>Display:</b> ${esc(o.typography.display)} · <b>Body:</b> ${esc(o.typography.body)}</p><p class="muted">${esc(o.typography.rationale)}</p></div>
       <div class="sec"><h3>Logo</h3><p><span class="pill accent">${esc(o.logo_concept_method.replace(/_/g, ' '))}</span></p><p>${esc(o.logo_direction)}</p></div>
       <div class="sec"><h3>Imagery</h3><p>${esc(o.imagery_style)}</p></div>
       <div class="sec"><h3>Packaging and signage</h3><p>${esc(o.packaging_and_signage_notes)}</p></div>
       <div class="sec"><h3>Avoid</h3>${list(o.anti_patterns)}</div>`;
+  },
+  identity_directions(o, run) {
+    loadFonts(o.directions.flatMap(d => [d.typography.display, d.typography.body]));
+    const choosing = run && run.status === 'awaiting_approval' && run.stage === 'creative';
+    const current = run?.chosen_direction ?? o.recommended;
+    if (pickedDirection === null || pickedDirection >= o.directions.length) pickedDirection = current;
+    const sel = choosing ? pickedDirection : current;
+    return `<p>${esc(o.comparison)}</p>
+      ${choosing ? '<p class="hint">Pick the direction to keep. Approve to build the report on it, or request changes to refine it with your feedback. To get three new directions instead, request changes and say so.</p>' : ''}
+      <div class="dirs">${o.directions.map((d, i) => `<div class="dir ${i === sel ? 'on' : ''}">
+        ${choosing ? `<label class="pick"><input type="radio" name="direction" value="${i}" ${i === sel ? 'checked' : ''}> ${esc(d.direction_name)}</label>` : `<b>${esc(d.direction_name)}</b>`}
+        <div>${i === o.recommended ? '<span class="pill accent">Recommended</span> ' : ''}${i === run?.chosen_direction ? '<span class="pill ok">Chosen</span>' : ''}</div>
+        <div class="hint">${esc(d.visual_direction_summary)}</div>
+        <div class="strip">${d.color_palette.map(c => `<span title="${esc(c.name)} ${esc(c.hex)}" style="background:${esc(c.hex)}"></span>`).join('')}</div>
+        <div class="themes">${themePreview(d.tokens, d.typography, 'Light', true)}${d.dark_tokens ? themePreview(d.dark_tokens, d.typography, 'Dark', true) : ''}</div>
+        <div class="hint"><b>Logo</b> (${esc(d.logo_concept_method.replace(/_/g, ' '))}): ${esc(d.logo_direction)}</div>
+        <div class="hint"><b>Type:</b> ${esc(d.typography.display)} + ${esc(d.typography.body)}</div>
+      </div>`).join('')}</div>`;
   },
   qa(o) {
     const sev = s => `<span class="pill ${s === 'blocker' ? 'bad' : s === 'major' ? 'warn' : ''}">${esc(s)}</span>`;
@@ -402,6 +424,19 @@ const R = {
         ${auto.map(f => `<tr><td>${sev(f.severity)}</td><td><code>${esc(f.location)}</code></td><td>${esc(f.problem)}</td></tr>`).join('')}</table>` : '<p class="muted">All checks passed: no health claims, placeholders, unsourced metrics, or contrast failures.</p>'}</div>`;
   },
 };
+function themePreview(t, typo, label, compact) {
+  const d = esc(typo.display), b = esc(typo.body);
+  return `<div class="preview" style="background:${esc(t.bg)};color:${esc(t.fg)}"><div class="p-in">
+    <div style="font-family:'${d}',Georgia,serif;font-size:${compact ? 17 : 26}px;font-weight:600">${compact ? label : `Headline in ${d}`}</div>
+    <div style="font-family:'${b}',system-ui;color:${esc(t.muted)};font-size:${compact ? 12 : 14}px">${compact ? 'Muted text' : `${label} theme: body and muted text in ${b}.`}</div>
+    <div class="p-card" style="background:${esc(t.surface)};border:1px solid ${esc(t.border)};font-family:'${b}',system-ui;${compact ? 'padding:8px;font-size:12px' : ''}">
+      ${compact ? '' : 'Menu card on the surface color.<br>'}<span class="p-btn" style="background:${esc(t.accent)};color:${esc(t.accent_on)};${compact ? 'margin-top:0' : ''}">Order ahead</span></div>
+  </div></div>`;
+}
+function contrastRow(t) {
+  const r = (a, b, min) => { const v = contrast(a, b); return `<span class="ratio pill ${v >= min ? 'ok' : 'bad'}">${v.toFixed(1)}:1</span>`; };
+  return `<div class="row" style="margin-top:8px"><span class="hint">Contrast:</span> text ${r(t.fg, t.bg, 4.5)} muted ${r(t.muted, t.bg, 4.5)} button ${r(t.accent_on, t.accent, 4.5)} accent on bg ${r(t.accent, t.bg, 3)}</div>`;
+}
 const fontsLoaded = new Set();
 function loadFonts(names) {
   const fresh = names.filter(n => n && !fontsLoaded.has(n));
@@ -411,25 +446,30 @@ function loadFonts(names) {
   l.href = 'https://fonts.googleapis.com/css2?' + fresh.map(n => 'family=' + encodeURIComponent(n).replace(/%20/g, '+')).join('&') + '&display=swap';
   document.head.appendChild(l);
 }
-const TAB_NAMES = {research:'Research', strategy:'Strategy', messaging:'Messaging', identity:'Identity', report:'Report', qa:'QA'};
+const TAB_NAMES = {research:'Research', strategy:'Strategy', messaging:'Messaging', identity_directions:'Directions', identity:'Identity', report:'Report', qa:'QA'};
 async function renderTab(run, key) {
   if (key === 'report') {
     try { return `<div class="md">${md(await api(`/runs/${run.id}/report.md`))}</div>`; } catch { return '<p class="muted">Not produced yet.</p>'; }
   }
-  return R[key](run.outputs[key]);
+  return R[key](run.outputs[key], run);
 }
 function tabs(id, keys, active) {
   return `<div class="tabs" data-tabs="${id}">${keys.map(k => `<button data-k="${k}" class="${k === active ? 'on' : ''}">${TAB_NAMES[k]}</button>`).join('')}</div><div id="tab-${id}"></div>`;
 }
 async function wireTabs(run, id, keys) {
   const box = document.querySelector(`[data-tabs="${id}"]`); if (!box) return;
-  const show = async k => { currentTab[id] = k; box.querySelectorAll('button').forEach(b => b.classList.toggle('on', b.dataset.k === k)); $('#tab-' + id).innerHTML = await renderTab(run, k); };
+  const show = async k => { currentTab[id] = k; box.querySelectorAll('button').forEach(b => b.classList.toggle('on', b.dataset.k === k)); $('#tab-' + id).innerHTML = await renderTab(run, k);
+    $('#tab-' + id).querySelectorAll('input[name="direction"]').forEach(input => input.onchange = () => {
+      pickedDirection = Number(input.value);
+      document.querySelectorAll('input[name="direction"]').forEach(x => { x.checked = Number(x.value) === pickedDirection; x.closest('.dir').classList.toggle('on', x.checked); });
+    });
+  };
   box.querySelectorAll('button').forEach(b => b.onclick = () => show(b.dataset.k));
   await show(keys.includes(currentTab[id]) ? currentTab[id] : keys[0]);
 }
 
 async function runView(id) {
-  currentTab = {};
+  currentTab = {}; pickedDirection = null;
   let lastSig = '';
   const draw = async (force) => {
     let v, events;
@@ -447,7 +487,9 @@ async function runView(id) {
     else if (r.status === 'rejected') banner = `<div class="banner bad"><div><b>Rejected.</b> This engagement was stopped.</div></div>`;
     const downloads = r.outputs.identity || r.outputs.report ? `<div class="card sec"><h3>Deliverables</h3>
         ${r.outputs.report ? `<p><a class="btn" href="/runs/${r.id}/report.md" target="_blank">Brand report (Markdown)</a></p>` : ''}
-        ${r.outputs.identity ? `<p><a class="btn" href="/runs/${r.id}/design-system.zip">Design system (.zip)</a></p><p class="hint">DESIGN.md, tokens.css and manifest.json for building the client's website.</p>` : ''}</div>` : '';
+        ${r.outputs.identity ? `<p><a class="btn" href="/runs/${r.id}/design-system.zip">Design system (.zip)</a></p><p class="hint">DESIGN.md, tokens.css (light and dark) and manifest.json for building the client's website.</p>
+          <p><a class="btn" href="/runs/${r.id}/brand-guideline.md" target="_blank">Brand guideline (Markdown)</a></p><p class="hint">For a designer, or to paste into an AI design tool such as Lovart: brand rules, asset sizes and ready-made prompts. Also inside the .zip.</p>
+          <p><a class="btn" href="/runs/${r.id}/seo-brief.md" target="_blank">SEO brief (Markdown)</a></p><p class="hint">For whoever builds the site: local keywords, page titles and descriptions, structured data and a Google Business Profile checklist. Also inside the .zip.</p>` : ''}</div>` : '';
     const reviewKeys = cp ? REVIEW_TABS[cp].filter(k => r.outputs[k]) : [];
     const questions = cp === 'research' && r.outputs.research.open_questions.length ? `<div class="sec"><h3>Questions for the client</h3>
         <p class="hint">Each has a recommended answer. Change it to what the client actually said. Every later agent sees these answers.</p>
@@ -465,7 +507,7 @@ async function runView(id) {
       const text = {
         'run.created':'Engagement created', 'stage.started':`Stage ${e.stage} started`, 'stage.completed':`Stage ${e.stage} finished`,
         'agent.started':`${AGENTS[d.agent] || d.agent} started`, 'agent.completed':`${AGENTS[d.agent] || d.agent} finished in ${(d.latency_ms/1000).toFixed(1)}s`,
-        'checkpoint.opened':`${CP_LABEL[d.checkpoint]} opened`, 'checkpoint.decided':`${CP_LABEL[d.checkpoint]}: ${String(d.decision).replace('_',' ')} by ${e.actor}${d.feedback ? ` · “${d.feedback}”` : ''}`,
+        'checkpoint.opened':`${CP_LABEL[d.checkpoint]} opened`, 'checkpoint.decided':`${CP_LABEL[d.checkpoint]}: ${String(d.decision).replace('_',' ')} by ${e.actor}${d.direction != null && r.outputs.identity_directions ? ` · kept “${r.outputs.identity_directions.directions[d.direction]?.direction_name}”` : ''}${d.feedback ? ` · “${d.feedback}”` : ''}`,
         'qa.reviewed':`QA attempt ${d.attempt}: ${d.passed ? 'passed' : 'failed'} (${d.score}/10)`, 'qa.routed_revision':`QA sent ${d.issues?.length} issue(s) back to ${AGENTS[d.agent] || d.agent}`,
         'qa.escalated':'QA escalated to you', 'facts.saved':`Facts saved: ${d.active} active, ${d.pending} pending, ${d.dropped} dropped`,
         'stage.failed':`Failed: ${d.error}`, 'run.completed':'Engagement complete',
@@ -496,9 +538,10 @@ async function runView(id) {
       if (decision === 'request_changes' && !feedback) { toast('Write what should change first.'); $('#feedback').focus(); return; }
       if (decision === 'reject' && !confirm('Reject and stop this engagement?')) return;
       const answers = [...document.querySelectorAll('input[data-q]')].map(i => ({question:i.dataset.q, answer:i.value}));
+      const direction = cp === 'creative' && r.outputs.identity_directions && decision !== 'reject' ? pickedDirection : null;
       document.querySelectorAll('[data-d]').forEach(b => b.disabled = true);
       try {
-        await api(`/runs/${id}/decision`, {method:'POST', body:JSON.stringify({checkpoint:cp, decision, feedback, answers, actor:'strategist'})});
+        await api(`/runs/${id}/decision`, {method:'POST', body:JSON.stringify({checkpoint:cp, decision, feedback, answers, direction, actor:'strategist'})});
         toast({approve:'Approved. The next agents are starting.', request_changes:'Sent back with your feedback.', reject:'Engagement rejected.'}[decision]);
       } catch (e) { toast(e.message); }
       editing = false; draw(true);
@@ -545,12 +588,12 @@ async function clientView(cid) {
 // ------------------------------------------------------------------ how it works
 function how() {
   const cps = (SETTINGS?.checkpoints || []).map(c => CP_LABEL[c]).join(', ');
-  $('#view').innerHTML = `<div class="head"><div><div class="dnum">04 · How it works</div><h2>The pipeline</h2><p class="sub2">Six specialists, three human checkpoints, one QA gate.</p></div></div>
+  $('#view').innerHTML = `<div class="head"><div><div class="dnum">04 · How it works</div><h2>The pipeline</h2><p class="sub2">Six specialists, ${(SETTINGS?.checkpoints || []).length} human checkpoints, one QA gate.</p></div></div>
     <div class="grid" style="grid-template-columns:repeat(auto-fill,minmax(260px,1fr))">
       <div class="card"><h3>1. Research Analyst</h3><p>Sizes up the market, audience, competitors and regulations, then asks the client a few questions, each with a recommended answer.</p></div>
       <div class="card"><h3>2. Brand Strategist</h3><p>Writes the positioning, promise and 3-5 pillars, each traced to research, the client's answers or stored facts.</p></div>
       <div class="card"><h3>3. Messaging Lead</h3><p>Taglines, elevator pitch, key messages per pillar, tone of voice and sample copy for real channels.</p></div>
-      <div class="card"><h3>4. Identity Direction</h3><p>Palette, role tokens, typography, logo direction, imagery and packaging notes, exported as a ready-to-build design system.</p></div>
+      <div class="card"><h3>4. Identity Direction</h3><p>Three distinct directions, each with a palette, light and dark color tokens, typography, logo direction and imagery. You pick one at the creative review; it is exported as a design system and a brand guideline for designers or AI design tools.</p></div>
       <div class="card"><h3>5. Report Producer</h3><p>Assembles the approved work into one client-ready report.</p></div>
       <div class="card"><h3>6. QA Reviewer</h3><p>Checks the report against the brief, brand facts and compliance rules. Issues go back to the agent that owns them.</p></div>
     </div>

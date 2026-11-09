@@ -15,5 +15,9 @@ Terms only. Decisions and their reasons live in `docs/adr/`.
 - **Brand fact**: a durable statement about a client in Postgres, with a confidence and a status.
 - **Fact status**: `active` (used by agents), `pending` (waiting for a person), `rejected` (never used, never re-added).
 - **Confidence band**: the range of extractor confidence that decides a fact's status.
-- **Design system package**: the approved identity exported as `manifest.json`, `DESIGN.md` and `tokens.css` in OpenDesign's layout, for building the client's website.
+- **Design system package**: the approved identity exported as `manifest.json`, `DESIGN.md` and `tokens.css` (light and dark themes) in OpenDesign's layout, for building the client's website.
+- **Identity direction**: one complete visual answer to the strategy (palette, light and dark tokens, type, logo concept). The Identity Director proposes three; a person picks one at the creative checkpoint, and later changes refine that one.
+- **Dark tokens**: the identity's role colors for dark grounds (dark menus, night signage, dark mode), held to the same contrast minimums as the light tokens.
+- **Brand guideline**: `BRAND_GUIDELINE.md`, the production brief for the logo and starter assets, written for a designer or to paste into an AI design tool.
+- **SEO brief**: `SEO_BRIEF.md`, the search starter kit for the site builder: local keywords, page titles and meta descriptions, Schema.org JSON-LD, a Google Business Profile checklist and a build checklist. Generated in code from the approved work.
 - **Needs you**: the board lane for runs waiting on a person (open checkpoint or failure).

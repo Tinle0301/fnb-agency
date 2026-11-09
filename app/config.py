@@ -38,7 +38,7 @@ class Settings:
 
     # Human checkpoints. The pipeline pauses after each listed stage.
     checkpoints: frozenset[str] = field(
-        default_factory=lambda: frozenset({"research", "strategy", "final"})
+        default_factory=lambda: frozenset({"research", "strategy", "creative", "final"})
     )
     # How many times the Report Producer may revise after a QA failure before escalating.
     max_qa_revisions: int = 2
@@ -55,7 +55,7 @@ class Settings:
 
     @classmethod
     def from_env(cls) -> "Settings":
-        checkpoints = _env("AGENCY_CHECKPOINTS", "research,strategy,final")
+        checkpoints = _env("AGENCY_CHECKPOINTS", "research,strategy,creative,final")
         return cls(
             agent_model=_env("AGENCY_MODEL", cls.agent_model),
             agent_effort=_env("AGENCY_EFFORT", cls.agent_effort),

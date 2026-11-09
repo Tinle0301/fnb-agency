@@ -5,6 +5,11 @@ Pipeline (checkpoint names in brackets; which ones pause is configurable, "final
     research ─[research]→ strategy ─[strategy]→ creative ─[creative]→ report+QA ─[final]→ facts
                                                 (messaging ∥ identity)
 
+The Identity Director proposes three distinct directions. At the creative checkpoint a person
+picks one (or the recommended one is used when that checkpoint is switched off); from then on
+`outputs["identity"]` is the chosen direction, and any later identity changes (human feedback
+on a picked direction, or QA issues) refine that one direction instead of starting over.
+
 At a checkpoint the run waits in `awaiting_approval`. A person can approve (move on),
 request changes (re-run the same stage with their feedback in the prompt), or reject.
 The report stage loops Report Producer → automated checks → QA Reviewer, feeding QA
@@ -24,6 +29,7 @@ from app import checks
 from app.agents import (
     BrandStrategist,
     IdentityDirection,
+    IdentityRefiner,
     MessagingLead,
     QAReviewer,
     ReportProducer,
@@ -43,6 +49,7 @@ from app.schemas import (
     ClientBrief,
     Decision,
     FactStatus,
+    IdentityDirections,
     IdentityOutput,
     MessagingOutput,
     QAOutput,
@@ -62,6 +69,7 @@ OUTPUT_TYPES: dict[str, type[BaseModel]] = {
     "strategy": StrategyOutput,
     "messaging": MessagingOutput,
     "identity": IdentityOutput,
+    "identity_directions": IdentityDirections,
     "report": ReportOutput,
     "qa": QAOutput,
 }
@@ -122,6 +130,7 @@ class Orchestrator:
         self.strategist = BrandStrategist(llm, model, effort)
         self.messaging = MessagingLead(llm, model, effort)
         self.identity = IdentityDirection(llm, model, effort)
+        self.identity_refiner = IdentityRefiner(llm, model, effort)
         self.reporter = ReportProducer(llm, model, effort)
         self.qa = QAReviewer(llm, model, effort)
         self.extractor = FactExtractor(llm, settings.extractor_model, settings.extractor_effort)
@@ -198,12 +207,16 @@ class Orchestrator:
         decision: Decision,
         feedback: str = "",
         answers: list[ClientAnswer] | None = None,
+        direction: int | None = None,
         actor: str = "human",
     ) -> Run:
         """Record a human decision at the open checkpoint. Call advance() afterwards.
 
         At the research checkpoint, `answers` carries the client's replies to the Research
         Analyst's clarifying questions; every later agent sees them.
+        At the creative checkpoint, `direction` picks one of the identity directions (0-based).
+        Approving without one keeps the recommended direction; requesting changes with one
+        refines that direction, and without one asks for three new directions.
         """
         async with self._lock(run_id):
             run = await self.get_run(run_id)
@@ -218,6 +231,12 @@ class Orchestrator:
                 raise InvalidDecision("request_changes needs feedback describing what to change")
             if answers and checkpoint != "research":
                 raise InvalidDecision("answers to clarifying questions are taken at the research checkpoint")
+            if direction is not None:
+                if checkpoint != "creative":
+                    raise InvalidDecision("an identity direction is picked at the creative checkpoint")
+                options = run.outputs.get("identity_directions", {}).get("directions", [])
+                if not 0 <= direction < len(options):
+                    raise InvalidDecision(f"direction {direction} does not exist; there are {len(options)}")
 
             with log_context(run_id=run.id, client_id=run.client_id, stage=run.stage.value):
                 await self.memory.record_decision(
@@ -232,12 +251,19 @@ class Orchestrator:
                         "decision": decision.value,
                         "feedback": feedback,
                         "answers": [a.model_dump() for a in answers or []],
+                        "direction": direction,
                     },
                 )
                 log.info("checkpoint.decided", checkpoint=checkpoint, decision=decision.value, actor=actor)
 
                 if answers:
                     run.answers = [*run.answers, *answers]
+                if direction is not None and decision is not Decision.reject:
+                    self._choose_direction(run, direction)
+                elif checkpoint == "creative" and decision is Decision.approve and run.chosen_direction is None:
+                    self._choose_direction(run, self._recommended(run))
+                elif checkpoint == "creative" and decision is Decision.request_changes:
+                    run.chosen_direction = None  # no direction picked: explore new directions
                 if decision is Decision.approve:
                     run.stage = next_stage(run.stage)
                     run.status = RunStatus.running
@@ -262,12 +288,25 @@ class Orchestrator:
             run.outputs["strategy"] = result.output.model_dump()
         elif run.stage is Stage.creative:
             feedback = run.feedback.get("creative", [])
+            if run.chosen_direction is not None and feedback:
+                # A direction was picked and sent back with notes: refine it, keep the others.
+                identity_agent = self.identity_refiner
+            else:
+                identity_agent = self.identity
             messaging, identity = await asyncio.gather(
                 self._run_agent(run, self.messaging, feedback),
-                self._run_agent(run, self.identity, feedback),
+                self._run_agent(run, identity_agent, feedback),
             )
             run.outputs["messaging"] = messaging.output.model_dump()
-            run.outputs["identity"] = identity.output.model_dump()
+            if identity_agent is self.identity_refiner:
+                self._replace_chosen_direction(run, identity.output)
+            else:
+                explored: IdentityDirections = identity.output
+                if not explored.directions:
+                    raise ValueError("Identity Director returned no directions")
+                run.outputs["identity_directions"] = explored.model_dump()
+                run.chosen_direction = None
+                run.outputs["identity"] = explored.directions[self._recommended(run)].model_dump()
         elif run.stage is Stage.report:
             await self._report_with_qa(run)
         elif run.stage is Stage.final:
@@ -354,13 +393,16 @@ class Orchestrator:
         if messaging_fixes:
             jobs.append(("messaging", self.messaging, messaging_fixes))
         if identity_fixes:
-            jobs.append(("identity", self.identity, identity_fixes))
+            jobs.append(("identity", self.identity_refiner, identity_fixes))
         if not jobs:
             return
         prior = run.feedback.get("creative", [])
         results = await asyncio.gather(*(self._run_agent(run, agent, prior + fixes) for _, agent, fixes in jobs))
         for (key, agent, fixes), result in zip(jobs, results):
-            run.outputs[key] = result.output.model_dump()
+            if key == "identity":
+                self._replace_chosen_direction(run, result.output)
+            else:
+                run.outputs[key] = result.output.model_dump()
             log.info("qa.routed_revision", owner=agent.name, issues=len(fixes))
             await self._event(run, "qa.routed_revision", detail={"agent": agent.name, "issues": fixes})
 
@@ -388,6 +430,29 @@ class Orchestrator:
         run.outputs["facts"] = summary
         log.info("facts.saved", **summary)
         await self._event(run, "facts.saved", detail=summary)
+
+    # ------------------------------------------------------------------ identity directions
+
+    @staticmethod
+    def _recommended(run: Run) -> int:
+        explored = run.outputs.get("identity_directions") or {}
+        count = len(explored.get("directions", []))
+        index = explored.get("recommended", 0)
+        return index if 0 <= index < count else 0
+
+    @staticmethod
+    def _choose_direction(run: Run, index: int) -> None:
+        run.chosen_direction = index
+        run.outputs["identity"] = run.outputs["identity_directions"]["directions"][index]
+
+    @staticmethod
+    def _replace_chosen_direction(run: Run, refined: IdentityOutput) -> None:
+        """Store a refined identity as the current one, and in its slot among the directions."""
+        run.outputs["identity"] = refined.model_dump()
+        explored = run.outputs.get("identity_directions")
+        index = run.chosen_direction if run.chosen_direction is not None else Orchestrator._recommended(run)
+        if explored and 0 <= index < len(explored["directions"]):
+            explored["directions"][index] = refined.model_dump()
 
     # ------------------------------------------------------------------ helpers
 

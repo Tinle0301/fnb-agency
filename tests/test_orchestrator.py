@@ -12,6 +12,8 @@ from app.schemas import (
     ClientAnswer,
     Decision,
     FactStatus,
+    IdentityDirections,
+    IdentityOutput,
     MessagingOutput,
     QAOutput,
     ReportOutput,
@@ -40,18 +42,84 @@ async def test_pauses_at_each_checkpoint_in_order(orchestrator):
     while run.status is RunStatus.awaiting_approval:
         seen.append(current_checkpoint(run))
         run = await approve(orchestrator, run)
-    assert seen == ["research", "strategy", "final"]
+    assert seen == ["research", "strategy", "creative", "final"]
     assert run.status is RunStatus.completed
 
 
-async def test_creative_checkpoint_can_be_switched_on(llm):
-    settings = Settings(storage="memory", checkpoints=frozenset({"research", "strategy", "creative", "final"}))
-    orch = Orchestrator(llm, InMemorySessionStore(), InMemoryBrandMemory(), settings)
-    run = await start(orch)
-    run = await approve(orch, run)
-    run = await approve(orch, run)
+async def test_creative_checkpoint_waits_before_the_report(orchestrator, llm):
+    run = await start(orchestrator)
+    run = await approve(orchestrator, run)
+    run = await approve(orchestrator, run)
     assert current_checkpoint(run) == "creative"
     assert llm.prompts_for(ReportOutput) == []
+
+
+async def to_creative(orch: Orchestrator):
+    run = await start(orch)
+    run = await approve(orch, run)
+    return await approve(orch, run)
+
+
+async def test_identity_offers_three_directions_and_defaults_to_the_recommended(orchestrator):
+    run = await to_creative(orchestrator)
+    directions = run.outputs["identity_directions"]["directions"]
+    assert [d["direction_name"] for d in directions] == ["Tide Line", "Signal Flag", "Grain and Rope"]
+    assert run.outputs["identity"]["direction_name"] == "Tide Line"
+    assert run.chosen_direction is None
+    run = await approve(orchestrator, run)
+    assert run.chosen_direction == 0
+
+
+async def test_picked_direction_is_the_one_the_report_sees(orchestrator, llm):
+    run = await to_creative(orchestrator)
+    run = await approve(orchestrator, run, direction=1)
+    assert run.chosen_direction == 1
+    assert run.outputs["identity"]["direction_name"] == "Signal Flag"
+    assert "Signal Flag" in llm.prompts_for(ReportOutput)[0]
+
+
+async def test_changes_on_a_picked_direction_refine_it_instead_of_starting_over(orchestrator, llm):
+    run = await to_creative(orchestrator)
+    explore_calls = len(llm.prompts_for(IdentityDirections))
+    run = await orchestrator.decide(
+        run.id, checkpoint="creative", decision=Decision.request_changes, feedback="Simplify the flag.", direction=1
+    )
+    run = await orchestrator.advance(run.id)
+    assert len(llm.prompts_for(IdentityDirections)) == explore_calls
+    refine_prompt = llm.prompts_for(IdentityOutput)[-1]
+    assert "Simplify the flag." in refine_prompt and "Signal Flag" in refine_prompt
+    assert current_checkpoint(run) == "creative" and run.chosen_direction == 1
+
+
+async def test_changes_without_a_direction_explore_again(orchestrator, llm):
+    run = await to_creative(orchestrator)
+    run = await orchestrator.decide(
+        run.id, checkpoint="creative", decision=Decision.request_changes, feedback="Warmer options, please."
+    )
+    run = await orchestrator.advance(run.id)
+    prompts = llm.prompts_for(IdentityDirections)
+    assert len(prompts) == 2 and "Warmer options, please." in prompts[1]
+    assert llm.prompts_for(IdentityOutput) == []
+
+
+async def test_direction_is_only_picked_at_creative(orchestrator):
+    run = await start(orchestrator)
+    with pytest.raises(InvalidDecision):
+        await orchestrator.decide(run.id, checkpoint="research", decision=Decision.approve, direction=0)
+
+
+async def test_qa_identity_issue_refines_the_chosen_direction(orchestrator, llm):
+    qa_identity = fx.QA_FAIL.model_copy(
+        update={"issues": [fx.QA_FAIL.issues[0].model_copy(update={"location": "identity.dark_tokens.muted"})]}
+    )
+    llm.script(QAOutput, qa_identity, fx.QA_PASS)
+    run = await to_creative(orchestrator)
+    run = await approve(orchestrator, run, direction=2)
+    assert len(llm.prompts_for(IdentityOutput)) == 1
+    assert "Grain and Rope" in llm.prompts_for(IdentityOutput)[0]
+    # The refiner's output replaces the chosen slot only.
+    assert run.outputs["identity_directions"]["directions"][2]["direction_name"] == "Tide Line"
+    assert run.outputs["identity_directions"]["directions"][1]["direction_name"] == "Signal Flag"
 
 
 async def test_nothing_runs_past_research_until_a_person_approves(orchestrator, llm):

@@ -140,17 +140,29 @@ LogoConceptMethod = Literal[
 
 
 class IdentityOutput(BaseModel):
+    direction_name: str = Field(description="Short evocative name for this creative direction, e.g. 'Tide Chart'.")
     visual_direction_summary: str
     mood_keywords: list[str]
     symbol_logic: str = Field(description="Core brand ideas and the symbols they map to.")
     color_palette: list[PaletteColor]
-    tokens: SemanticTokens
+    tokens: SemanticTokens = Field(description="Role colors for light backgrounds (the default theme).")
+    dark_tokens: SemanticTokens = Field(
+        description="The same roles for dark backgrounds (dark menus, night signage, dark mode). Same contrast minimums."
+    )
     typography: Typography
     logo_concept_method: LogoConceptMethod
     logo_direction: str
     imagery_style: str
     packaging_and_signage_notes: str
     anti_patterns: list[str] = Field(description="Visual choices this brand must avoid, and why.")
+
+
+class IdentityDirections(BaseModel):
+    """Several distinct identity directions; a person picks one at the creative checkpoint."""
+
+    directions: list[IdentityOutput] = Field(description="Three genuinely different directions, not variations.")
+    recommended: int = Field(description="0-based index of the direction you recommend.")
+    comparison: str = Field(description="How the directions differ and why the recommended one fits the strategy best.")
 
 
 class ReportSection(BaseModel):
@@ -288,6 +300,9 @@ class Run(BaseModel):
     answers: list[ClientAnswer] = []
     qa_attempts: int = 0
     qa_escalated: bool = False
+    # Which identity direction a person picked at the creative checkpoint (index into
+    # outputs["identity_directions"]["directions"]); None until someone picks.
+    chosen_direction: int | None = None
     error: str | None = None
     usage: dict[str, int] = {"input_tokens": 0, "output_tokens": 0}
     created_at: datetime = Field(default_factory=utcnow)

@@ -10,7 +10,7 @@ import re
 from dataclasses import dataclass
 from typing import Literal
 
-from app.schemas import IdentityOutput, MessagingOutput, ReportOutput
+from app.schemas import IdentityDirections, IdentityOutput, MessagingOutput, ReportOutput
 
 Severity = Literal["blocker", "major", "minor"]
 
@@ -161,6 +161,48 @@ CONTRAST_PAIRS = [
 ]
 
 
+# A dark theme's background should actually be dark: relative luminance at or below this
+# (about #3A3A3A for a neutral grey).
+DARK_BG_MAX_LUMINANCE = 0.05
+
+
+def _check_tokens(tokens: dict[str, str], field: str, *, dark: bool) -> list[Finding]:
+    """Hex validity and contrast for one theme's role tokens (light `tokens` or `dark_tokens`)."""
+    findings: list[Finding] = []
+    where = f"identity.{field}"
+    theme = "dark theme: " if dark else ""
+    bad_tokens = [name for name, value in tokens.items() if not _HEX.match(value)]
+    for name in bad_tokens:
+        findings.append(Finding("blocker", f"{where}.{name}", f"Invalid hex '{tokens[name]}'"))
+    if bad_tokens:
+        return findings
+
+    for fg, bg, minimum, severity in CONTRAST_PAIRS:
+        ratio = contrast_ratio(tokens[fg], tokens[bg])
+        if ratio < minimum:
+            findings.append(
+                Finding(
+                    severity,
+                    f"{where}.{fg}",
+                    f"{theme}{fg} on {bg} contrast is {ratio:.2f}:1, below the {minimum}:1 minimum",
+                )
+            )
+    if tokens["accent"].upper() in AI_DEFAULT_ACCENTS:
+        findings.append(
+            Finding("major", f"{where}.accent", "Accent is a default Tailwind indigo/violet; pick an ownable color")
+        )
+    for name in ("bg", "fg"):
+        if tokens[name].upper() in ("#000000", "#FFFFFF"):
+            findings.append(
+                Finding("minor", f"{where}.{name}", f"{theme}Pure black/white causes glare; use an off-shade")
+            )
+    if dark and _luminance(tokens["bg"]) > DARK_BG_MAX_LUMINANCE:
+        findings.append(
+            Finding("major", f"{where}.bg", f"dark theme: background {tokens['bg']} is not dark")
+        )
+    return findings
+
+
 def check_identity(identity: IdentityOutput) -> list[Finding]:
     findings: list[Finding] = []
     if not 3 <= len(identity.color_palette) <= 7:
@@ -174,32 +216,28 @@ def check_identity(identity: IdentityOutput) -> list[Finding]:
     if len(set(hexes)) != len(hexes):
         findings.append(Finding("minor", "identity.color_palette", "Duplicate colors in palette"))
 
-    tokens = identity.tokens.model_dump()
-    bad_tokens = [name for name, value in tokens.items() if not _HEX.match(value)]
-    for name in bad_tokens:
-        findings.append(Finding("blocker", f"identity.tokens.{name}", f"Invalid hex '{tokens[name]}'"))
-    if bad_tokens:
-        return findings
+    findings += _check_tokens(identity.tokens.model_dump(), "tokens", dark=False)
+    findings += _check_tokens(identity.dark_tokens.model_dump(), "dark_tokens", dark=True)
+    return findings
 
-    for fg, bg, minimum, severity in CONTRAST_PAIRS:
-        ratio = contrast_ratio(tokens[fg], tokens[bg])
-        if ratio < minimum:
-            findings.append(
-                Finding(
-                    severity,
-                    f"identity.tokens.{fg}",
-                    f"{fg} on {bg} contrast is {ratio:.2f}:1, below the {minimum}:1 minimum",
-                )
-            )
-    if tokens["accent"].upper() in AI_DEFAULT_ACCENTS:
-        findings.append(
-            Finding("major", "identity.tokens.accent", "Accent is a default Tailwind indigo/violet; pick an ownable color")
-        )
-    for name in ("bg", "fg"):
-        if tokens[name].upper() in ("#000000", "#FFFFFF"):
-            findings.append(
-                Finding("minor", f"identity.tokens.{name}", "Pure black/white causes glare; use an off-shade")
-            )
+
+def check_directions(explored: IdentityDirections) -> list[Finding]:
+    """The Identity Director's exploration: 2-3 directions that are actually different."""
+    findings: list[Finding] = []
+    count = len(explored.directions)
+    if not 2 <= count <= 3:
+        findings.append(Finding("major", "identity_directions", f"Expected 2-3 directions, got {count}"))
+    if not 0 <= explored.recommended < max(count, 1):
+        findings.append(Finding("major", "identity_directions.recommended", "Recommended index is out of range"))
+    names = [d.direction_name.strip().lower() for d in explored.directions]
+    if len(set(names)) != len(names):
+        findings.append(Finding("minor", "identity_directions", "Two directions share a name"))
+    accents = [d.tokens.accent.upper() for d in explored.directions]
+    if len(set(accents)) != len(accents):
+        findings.append(Finding("major", "identity_directions", "Two directions share an accent color; they are not distinct"))
+    for i, direction in enumerate(explored.directions):
+        for f in check_identity(direction):
+            findings.append(Finding(f.severity, f.location.replace("identity.", f"identity_directions[{i}].", 1), f.problem))
     return findings
 
 

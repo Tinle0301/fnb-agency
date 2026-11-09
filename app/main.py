@@ -11,7 +11,14 @@ from fastapi.responses import FileResponse, PlainTextResponse, Response
 from pydantic import BaseModel, Field
 
 from app.config import Settings
-from app.exports import design_system_files, design_system_zip, report_markdown, slugify
+from app.exports import (
+    brand_guideline_md,
+    design_system_files,
+    design_system_zip,
+    report_markdown,
+    seo_brief_md,
+    slugify,
+)
 from app.llm import LLM, AnthropicLLM
 from app.logging_setup import configure_logging, get_logger
 from app.memory.facts import BrandMemory, InMemoryBrandMemory, PostgresBrandMemory
@@ -51,6 +58,9 @@ class DecisionRequest(BaseModel):
     decision: Decision
     feedback: str = ""
     answers: list[ClientAnswer] = []
+    direction: int | None = Field(
+        default=None, description="Creative checkpoint only: which identity direction to keep (0-based)."
+    )
     actor: str = "strategist"
 
 
@@ -173,6 +183,7 @@ def create_app(orchestrator: Orchestrator | None = None, settings: Settings | No
                 decision=body.decision,
                 feedback=body.feedback,
                 answers=body.answers,
+                direction=body.direction,
                 actor=body.actor,
             )
         except InvalidDecision as exc:
@@ -216,6 +227,18 @@ def create_app(orchestrator: Orchestrator | None = None, settings: Settings | No
             headers={"Content-Disposition": f'attachment; filename="{slug}-design-system.zip"'},
         )
 
+    @app.get("/runs/{run_id}/brand-guideline.md", response_class=PlainTextResponse)
+    async def brand_guideline(run_id: str, o: Orchestrator = Depends(orch)) -> str:
+        """Production guideline for a designer or an AI design tool (also inside the .zip)."""
+        run = await load(run_id, o)
+        return brand_guideline_md(*_approved_inputs(run))
+
+    @app.get("/runs/{run_id}/seo-brief.md", response_class=PlainTextResponse)
+    async def seo_brief(run_id: str, o: Orchestrator = Depends(orch)) -> str:
+        """Search starter kit for the site builder: keywords, titles, JSON-LD, Business Profile (also in the .zip)."""
+        run = await load(run_id, o)
+        return seo_brief_md(*_approved_inputs(run))
+
     @app.get("/settings")
     async def public_settings(o: Orchestrator = Depends(orch)) -> dict[str, Any]:
         """Workflow settings the dashboard shows (no secrets, no model IDs)."""
@@ -251,16 +274,20 @@ def create_app(orchestrator: Orchestrator | None = None, settings: Settings | No
     return app
 
 
-def _design_files(run: Run) -> dict[str, str]:
+def _approved_inputs(run: Run) -> tuple[ClientBrief, StrategyOutput, MessagingOutput, IdentityOutput]:
     missing = [k for k in ("strategy", "messaging", "identity") if k not in run.outputs]
     if missing:
         raise HTTPException(404, f"identity not produced yet (missing: {', '.join(missing)})")
-    return design_system_files(
+    return (
         run.brief,
         StrategyOutput.model_validate(run.outputs["strategy"]),
         MessagingOutput.model_validate(run.outputs["messaging"]),
         IdentityOutput.model_validate(run.outputs["identity"]),
     )
+
+
+def _design_files(run: Run) -> dict[str, str]:
+    return design_system_files(*_approved_inputs(run))
 
 
 app = create_app()

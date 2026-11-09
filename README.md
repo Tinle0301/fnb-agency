@@ -7,7 +7,7 @@ A brand agency for food and beverage clients, run by six AI specialists and stee
 | Research Analyst | Market, audience insights, competitors, trends, regulatory notes, questions for the client |
 | Brand Strategist | Positioning, brand pillars, personality, promise |
 | Messaging Lead | Taglines, voice, key messages, menu and social copy |
-| Identity Direction | Palette, design tokens, typography, logo direction |
+| Identity Direction | Three distinct visual directions (palette, light and dark color tokens, typography, logo direction); you pick one |
 | Report Producer | The client-facing brand report |
 | QA Reviewer | A score and a list of issues, sent back to whichever agent owns them |
 
@@ -60,7 +60,7 @@ Each engagement page has:
 - **The pipeline**: one step per agent and per checkpoint (✋). Green is done, blue is working, brown is waiting for you, red is failed.
 - **A banner** that says what is happening now and what, if anything, you need to do.
 - **Deliverables**: the work so far, one tab per deliverable.
-- **Downloads**: the brand report (Markdown) and the design system (.zip), once they exist.
+- **Downloads**: the brand report (Markdown), the design system (.zip), the brand guideline and the SEO brief, once they exist.
 - **Brief** and **Activity**: the original brief, the client's answers, and a timestamped log of every step.
 
 If an agent fails, the banner says why. Click **Retry stage** to run that stage again.
@@ -77,16 +77,22 @@ The checkpoints, in order:
 
 1. **Research review.** Read the findings and answer the **Questions for the client**. Each comes with a recommended answer; change it to what the client actually said. Every later agent sees these answers, and they are saved as facts about the client.
 2. **Strategy review.** Check the positioning and pillars. Everything after this point is built on them.
-3. **Final sign-off.** Messaging and identity run side by side, then the Report Producer writes the report and QA reviews everything. Read the **Report**, **QA**, **Messaging** and **Identity** tabs. The Identity tab shows the palette, a live preview built from the design tokens and the contrast ratio of every text pair.
+3. **Creative review.** Messaging and identity run side by side. The **Directions** tab shows three distinct identity directions next to each other, each previewed on a light and a dark background, with the recommended one marked. Pick the one to keep:
+   - **Approve** builds the report on the direction you picked (the recommended one if you don't change it).
+   - **Request changes** with a direction picked refines that direction using your feedback ("simplify the mark", "warmer accent"). To get three new directions instead, say so in the feedback; the agency starts over only when no direction is picked.
+4. **Final sign-off.** The Report Producer writes the report and QA reviews everything. Read the **Report**, **QA**, **Messaging** and **Identity** tabs. The Identity tab shows the palette, live previews on light and dark backgrounds, and the contrast ratio of every text pair in both.
 
-If QA finds a problem, the issue goes back to the agent that owns it (a weak tagline to the Messaging Lead, a contrast failure to Identity Direction) and the report is rebuilt. If QA still fails after the set number of revisions, the final checkpoint opens with a red **QA did not pass** banner, so you decide with the issues in front of you.
+If QA finds a problem, the issue goes back to the agent that owns it (a weak tagline to the Messaging Lead, a contrast failure to Identity Direction, which refines the direction you picked) and the report is rebuilt. If QA still fails after the set number of revisions, the final checkpoint opens with a red **QA did not pass** banner, so you decide with the issues in front of you.
 
 ## 6. Hand off the work
 
 After final sign-off, the **Deliverables** card gives you:
 
 - **Brand report (Markdown)**: ready to paste into a deck or doc for the client.
-- **Design system (.zip)**: `DESIGN.md`, `tokens.css` and `manifest.json` in the [OpenDesign](https://github.com/nexu-io/open-design) format. Give it to the person or tool building the client's website so the site uses exactly the brand the client signed off.
+- **Design system (.zip)**: `DESIGN.md`, `tokens.css` and `manifest.json` in the [OpenDesign](https://github.com/nexu-io/open-design) format. Give it to the person or tool building the client's website so the site uses exactly the brand the client signed off. `tokens.css` carries a light theme and a dark theme; the dark one follows the visitor's system setting, and `data-theme="dark"` or `"light"` on `<html>` forces one.
+- **Brand guideline (Markdown)**: also inside the .zip as `BRAND_GUIDELINE.md`. It is the production brief for the logo and starter visuals: brand summary, logo rules, palette with hex codes and contrast results, fonts, imagery, voice, an asset list with sizes (logo set, social profile image, Instagram post and story templates, business card, menu, packaging, one-page guideline sheet) and a pre-publish checklist. Give it to a designer as their brief, or paste its brand block and prompts into an AI design tool such as Lovart, Midjourney, Firefly or Canva so every asset follows the same rules.
+
+- **SEO brief (Markdown)**: also inside the .zip as `SEO_BRIEF.md`. The search starter kit for whoever builds the site: local search phrases, a title and meta description for each starter page (home, menu, story, visit, contact) written from the approved messaging, Schema.org structured data for the business and its menu (placeholders in CAPITALS for the address, hours and links), a Google Business Profile checklist with a ready business description, and a build checklist. After launch, run an SEO audit tool on the live site.
 
 ## 7. Keep brand memory accurate
 
@@ -104,7 +110,7 @@ Set these in `.env`:
 
 | Setting | What it does |
 |---|---|
-| `AGENCY_CHECKPOINTS` | Which reviews open, for example `research,strategy,final`. Add `creative` to review messaging and identity before the report. Final sign-off is always on. |
+| `AGENCY_CHECKPOINTS` | Which reviews open. Default `research,strategy,creative,final`. Leave out `creative` and the recommended identity direction is used without asking. Final sign-off is always on. |
 | `MAX_QA_REVISIONS` | How many times QA can send work back before it escalates to you. Default 2. |
 | `NOTIFY_WEBHOOK_URL` | A Slack incoming webhook (or any webhook) to ping you when an engagement needs you. |
 | `PUBLIC_BASE_URL` | The dashboard's address, used for links in those pings. |
