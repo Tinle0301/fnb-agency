@@ -43,6 +43,10 @@ def grade_research(brief: ClientBrief, out: ResearchOutput, upstream: dict) -> l
         Check("every insight has evidence", all(i.evidence.strip() for i in out.audience_insights)),
         Check("covers every named competitor", not missing, f"missing: {missing}" if missing else ""),
         Check("has regulatory notes", bool(out.regulatory_notes)),
+        Check(
+            "business profile filled and explained",
+            bool(out.business_profile.business_type and out.business_profile.location and out.business_profile.basis),
+        ),
         Check("1-6 clarifying questions", 1 <= len(out.open_questions) <= 6, f"{len(out.open_questions)} asked"),
         Check(
             "every question has a recommended answer",

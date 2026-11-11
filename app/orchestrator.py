@@ -44,6 +44,7 @@ from app.memory.facts import BrandMemory
 from app.memory.session import SessionStore
 from app.notify import Notifier
 from app.schemas import (
+    BusinessProfile,
     STAGE_ORDER,
     ClientAnswer,
     ClientBrief,
@@ -283,6 +284,7 @@ class Orchestrator:
         if run.stage is Stage.research:
             result = await self._run_agent(run, self.research, run.feedback.get("research", []))
             run.outputs["research"] = result.output.model_dump()
+            self._fill_brief(run, result.output.business_profile)
         elif run.stage is Stage.strategy:
             result = await self._run_agent(run, self.strategist, run.feedback.get("strategy", []))
             run.outputs["strategy"] = result.output.model_dump()
@@ -430,6 +432,22 @@ class Orchestrator:
         run.outputs["facts"] = summary
         log.info("facts.saved", **summary)
         await self._event(run, "facts.saved", detail=summary)
+
+    @staticmethod
+    def _fill_brief(run: Run, profile: BusinessProfile) -> None:
+        """Fill the brief fields the person left blank from the Research Analyst's profile.
+
+        Fields filled this way stay listed in run.inferred, so a research re-run can update them
+        while anything the person typed is never overwritten.
+        """
+        if not run.inferred:
+            run.inferred = run.brief.blank_fields()
+        for name in run.inferred:
+            value = getattr(profile, name)
+            if value:
+                setattr(run.brief, name, value)
+        if run.inferred:
+            log.info("brief.filled", fields=run.inferred)
 
     # ------------------------------------------------------------------ identity directions
 

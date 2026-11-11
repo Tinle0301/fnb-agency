@@ -52,6 +52,13 @@ BRIEFS = {"brewery": BREWERY_BRIEF, "bakery": BAKERY_BRIEF}
 
 
 BREWERY_RESEARCH = ResearchOutput(
+    business_profile={
+        "business_type": BREWERY_BRIEF.business_type,
+        "location": BREWERY_BRIEF.location,
+        "target_audience": BREWERY_BRIEF.target_audience,
+        "goals": BREWERY_BRIEF.goals,
+        "basis": "Copied from the brief.",
+    },
     market_summary=(
         "Portland has one of the densest craft beer scenes per capita in the US. Visitors drive taproom "
         "traffic in summer while locals sustain it the rest of the year, so a brewery that wins locals "

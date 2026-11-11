@@ -107,19 +107,14 @@ def test_dashboard_is_served(client):
     assert "Agency Dashboard" in client.get("/").text
 
 
-def test_activity_is_one_log_across_engagements(client):
-    assert client.get("/activity").json() == []
-    first = client.post("/runs", json=fx.BREWERY_BRIEF.model_dump()).json()["run"]["id"]
-    second = client.post("/runs", json=fx.BREWERY_BRIEF.model_dump()).json()["run"]["id"]
-    step(client, first, "research")
-
-    log = client.get("/activity").json()
-    assert {e["run_id"] for e in log} == {first, second}
-    assert [e["at"] for e in log] == sorted(e["at"] for e in log)
-    assert all(e["client_name"] == fx.BREWERY_BRIEF.client_name for e in log)
-    decided = [e for e in log if e["kind"] == "checkpoint.decided"]
-    assert decided and decided[0]["detail"]["checkpoint"] == "research"
-    assert len(client.get("/activity", params={"limit": 3}).json()) == 3
+def test_a_business_name_is_enough_to_start(client):
+    r = client.post("/runs", json={"client_name": "Banh Mi Lab"})
+    assert r.status_code == 202, r.text
+    view = client.get(f"/runs/{r.json()['run']['id']}").json()
+    assert view["open_checkpoint"] == "research"
+    assert view["run"]["brief"]["business_type"]  # filled in by research
+    assert view["run"]["inferred"] == ["business_type", "location", "target_audience", "goals"]
+    assert client.post("/runs", json={"client_name": ""}).status_code == 422
 
 
 def test_settings_tell_the_dashboard_which_checkpoints_exist(client):

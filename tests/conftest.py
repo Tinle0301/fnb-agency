@@ -48,7 +48,10 @@ class FakeLLM:
 
 @pytest.fixture
 def settings() -> Settings:
-    return Settings(storage="memory", max_qa_revisions=2)
+    # Tests walk every checkpoint; the shipped default is only research and final.
+    return Settings(
+        storage="memory", max_qa_revisions=2, checkpoints=frozenset({"research", "strategy", "creative", "final"})
+    )
 
 
 @pytest.fixture

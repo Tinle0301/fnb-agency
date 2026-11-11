@@ -36,10 +36,9 @@ class Settings:
     # Optional ceiling for facts sourced from agent-written (approved) deliverables.
     approved_output_confidence_cap: float | None = None
 
-    # Human checkpoints. The pipeline pauses after each listed stage.
-    checkpoints: frozenset[str] = field(
-        default_factory=lambda: frozenset({"research", "strategy", "creative", "final"})
-    )
+    # Human checkpoints. The pipeline pauses after each listed stage. By default a person checks
+    # what research worked out about the business, then signs off the finished report.
+    checkpoints: frozenset[str] = field(default_factory=lambda: frozenset({"research", "final"}))
     # How many times the Report Producer may revise after a QA failure before escalating.
     max_qa_revisions: int = 2
 
@@ -55,7 +54,7 @@ class Settings:
 
     @classmethod
     def from_env(cls) -> "Settings":
-        checkpoints = _env("AGENCY_CHECKPOINTS", "research,strategy,creative,final")
+        checkpoints = _env("AGENCY_CHECKPOINTS", "research,final")
         return cls(
             agent_model=_env("AGENCY_MODEL", cls.agent_model),
             agent_effort=_env("AGENCY_EFFORT", cls.agent_effort),

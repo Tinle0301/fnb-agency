@@ -17,7 +17,13 @@ Finish with open_questions: the decisions the strategy depends on that the brief
 each one in a form a busy owner can answer in a line, give your recommended answer, and word \
 the question so that "yes" accepts that recommendation. Keep it to the 3-6 questions whose \
 answers would most change the strategy; look facts up from the brief yourself rather than \
-asking for them."""
+asking for them.
+
+Fill business_profile. Where the brief gives the business type, location, audience or goals, copy \
+them. Where it leaves them blank (often only the business name is given), give your best reading \
+of the business from its name and anything you know about it, say in basis what each guess rests \
+on, and ask a clarifying question for every guess that matters, so a person can correct it before \
+strategy starts. Never present a guess about a specific business as a known fact."""
     output_type = ResearchOutput
 
     def build_prompt(self, ctx: AgentContext) -> str:

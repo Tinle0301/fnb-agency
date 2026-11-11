@@ -35,14 +35,16 @@ Open **http://localhost:8000**. The top bar says "demo" or "live" and which stor
 
 ## 2. Find your way around
 
-The bar under the title has four tabs:
+Type a business name on **Reports** and press **Analyze brand**. The Research Analyst works out what the business is (type, city, audience, goals) and researches its market; you check what it found, then the other agents write the strategy, messaging, visual identity and report, and you sign it off. Add the city if the name is common. The agents only know what the model already knows about a business (they do not browse the web), so check the research carefully for small or new businesses.
 
-- **Overview**: the agent terminal. Each agent's card shows its rule, status and last action; the live flow shows where the selected engagement is in the pipeline; the log lists every decision with its reason. Click an engagement above the flow to follow it.
-- **New engagement**: the client brief form.
+The tabs:
+
+- **Reports**: start a report, see every report with what needs you first, and follow how the agents are working on the one you select.
+- **Full brief**: start a report with everything you already know about the client. Only the name is required.
 - **Brand memory**: what the agency has learned about each client.
 - **How it works**: the pipeline and the quality rules, for new team members.
 
-A number next to a tab shows how much is waiting for you: engagements to review next to Overview, facts to confirm next to Brand memory. The dashboard refreshes on its own every few seconds, and pauses while you are typing.
+A number next to a tab shows how much is waiting for you: reports to review next to Reports, facts to confirm next to Brand memory. The dashboard refreshes on its own every few seconds, and pauses while you are typing.
 
 ## 3. Start an engagement
 
@@ -57,7 +59,7 @@ Write the brief the way the client said it. Text that reads like instructions to
 
 Each engagement page has:
 
-- **The pipeline**: one step per agent and per checkpoint (✋). Green is done, blue is working, brown is waiting for you, red is failed.
+- **The pipeline**: one step per agent and per checkpoint (person icon). Green is done, blue is working, brown is waiting for you, red is failed.
 - **A banner** that says what is happening now and what, if anything, you need to do.
 - **Deliverables**: the work so far, one tab per deliverable.
 - **Downloads**: the brand report (Markdown), the design system (.zip), the brand guideline and the SEO brief, once they exist.
@@ -67,7 +69,7 @@ If an agent fails, the banner says why. Click **Retry stage** to run that stage 
 
 ## 5. Review at each checkpoint
 
-When a checkpoint opens, the engagement moves to **Needs you** on the Overview and a review card appears at the top of the page. You have three choices:
+When a checkpoint opens, the engagement moves to **Needs you** on Reports and a review card appears at the top of the page. You have three choices:
 
 - **Approve and continue**: the next agents start.
 - **Request changes**: write what to change in **Feedback** (it is required). The stage runs again with your note.
@@ -110,7 +112,7 @@ Set these in `.env`:
 
 | Setting | What it does |
 |---|---|
-| `AGENCY_CHECKPOINTS` | Which reviews open. Default `research,strategy,creative,final`. Leave out `creative` and the recommended identity direction is used without asking. Final sign-off is always on. |
+| `AGENCY_CHECKPOINTS` | Which reviews open. Default `research,final`: you check the research, then sign off the report. Add `strategy` and `creative` for more stops. Leave out `creative` and the recommended identity direction is used without asking. Final sign-off is always on. |
 | `MAX_QA_REVISIONS` | How many times QA can send work back before it escalates to you. Default 2. |
 | `NOTIFY_WEBHOOK_URL` | A Slack incoming webhook (or any webhook) to ping you when an engagement needs you. |
 | `PUBLIC_BASE_URL` | The dashboard's address, used for links in those pings. |

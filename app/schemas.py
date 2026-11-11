@@ -7,12 +7,14 @@ bounds). Range checks happen in code after parsing.
 
 from __future__ import annotations
 
+import re
+
 from datetime import datetime, timezone
 from enum import Enum
 from typing import Any, Literal
 from uuid import uuid4
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 
 def utcnow() -> datetime:
@@ -23,16 +25,32 @@ def utcnow() -> datetime:
 
 
 class ClientBrief(BaseModel):
-    client_id: str = Field(description="Stable id for the client; brand facts are keyed on it.")
-    client_name: str
-    business_type: str = Field(description="e.g. craft brewery, plant-based bakery, coffee kiosk")
-    location: str
-    target_audience: str
-    goals: list[str]
+    """What the client tells us. Only the name is required: the Research Analyst fills in
+    whatever is left blank (see BusinessProfile) and a person confirms it at the research checkpoint."""
+
+    client_id: str = Field(default="", description="Stable id for the client; brand facts are keyed on it.")
+    client_name: str = Field(min_length=1)
+    business_type: str = Field(default="", description="e.g. craft brewery, plant-based bakery, coffee kiosk")
+    location: str = ""
+    target_audience: str = ""
+    goals: list[str] = []
     constraints: list[str] = []
     competitors: list[str] = []
     products: list[str] = []
     notes: str = ""
+
+    @model_validator(mode="after")
+    def _default_client_id(self) -> "ClientBrief":
+        if not self.client_id.strip():
+            self.client_id = re.sub(r"[^a-z0-9]+", "-", self.client_name.lower()).strip("-") or "client"
+        return self
+
+    def blank_fields(self) -> list[str]:
+        return [f for f in PROFILE_FIELDS if not getattr(self, f)]
+
+
+# Brief fields the Research Analyst can fill in when the person only gives a business name.
+PROFILE_FIELDS = ("business_type", "location", "target_audience", "goals")
 
 
 # --------------------------------------------------------------------------- agent outputs
@@ -56,7 +74,19 @@ class ClarifyingQuestion(BaseModel):
     recommended_answer: str
 
 
+class BusinessProfile(BaseModel):
+    business_type: str
+    location: str
+    target_audience: str
+    goals: list[str]
+    basis: str = Field(description="What this profile rests on and how sure it is; names every guess.")
+
+
 class ResearchOutput(BaseModel):
+    business_profile: BusinessProfile = Field(
+        description="The brief's business type, location, audience and goals: copied when the brief gives them, "
+        "your best reading of the business when it leaves them blank."
+    )
     market_summary: str
     audience_insights: list[AudienceInsight]
     competitor_landscape: list[CompetitorNote]
@@ -303,6 +333,8 @@ class Run(BaseModel):
     # Which identity direction a person picked at the creative checkpoint (index into
     # outputs["identity_directions"]["directions"]); None until someone picks.
     chosen_direction: int | None = None
+    # Brief fields the person left blank and the Research Analyst filled in (see ClientBrief).
+    inferred: list[str] = []
     error: str | None = None
     usage: dict[str, int] = {"input_tokens": 0, "output_tokens": 0}
     created_at: datetime = Field(default_factory=utcnow)
