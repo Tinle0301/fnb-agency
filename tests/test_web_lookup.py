@@ -98,3 +98,32 @@ async def test_anthropic_search_resumes_paused_turns_and_collects_sources():
     assert found.text == "Found it." and found.sources == [{"title": "A", "url": "https://example.com/a"}]
     assert (found.input_tokens, found.searches) == (17, 1)
     assert sent[1][1]["role"] == "assistant" and len(sent[1]) == 2  # resumed, no extra "continue" message
+
+
+async def test_cli_backend_reads_structured_output_and_sources(tmp_path):
+    import json as _json
+    import stat
+
+    from app.llm import CliLLM
+    from app.schemas import BusinessProfile
+
+    fake = tmp_path / "assistant"
+    fake.write_text(
+        "#!/usr/bin/env python3\n"
+        "import json, sys\n"
+        "sys.stdin.read()\n"
+        "args = sys.argv[1:]\n"
+        "if '--json-schema' in args:\n"
+        "    out = {'is_error': False, 'structured_output': {'business_type': 'banh mi stall', 'location': 'Hoi An',"
+        " 'target_audience': 'tourists', 'goals': ['x'], 'basis': 'lookup'}, 'usage': {'input_tokens': 3, 'output_tokens': 2}}\n"
+        "else:\n"
+        "    out = {'is_error': False, 'result': 'Found it.\\n\\nSources:\\nhttps://example.com/a\\nhttps://example.com/a', 'usage': {}}\n"
+        "print(json.dumps(out))\n"
+    )
+    fake.chmod(fake.stat().st_mode | stat.S_IEXEC)
+    llm = CliLLM(str(fake))
+
+    got = await llm.generate(system="s", prompt="p", output_type=BusinessProfile, model="m")
+    assert got.output.business_type == "banh mi stall" and got.input_tokens == 3
+    found = await llm.search(system="s", prompt="p", model="m")
+    assert found.text == "Found it." and [s["url"] for s in found.sources] == ["https://example.com/a"]

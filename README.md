@@ -23,6 +23,8 @@ pip install -e ".[dev]"
 AGENCY_DEMO=1 AGENCY_STORAGE=memory uvicorn app.main:app
 ```
 
+**Run it for real without an API key.** If the assistant command-line tool on your computer is signed in with your own subscription, the agents can run through it. In `.env` set `LLM_BACKEND=cli`, `AGENT_CLI` to the command you type to start that tool, `AGENCY_STORAGE=memory`, `AGENCY_DEMO=0`, and `AGENCY_MODEL` / `EXTRACTOR_MODEL` to model names it accepts. Then run `uvicorn app.main:app --env-file .env`. Calls count against your subscription's usage limits, and a report takes a few minutes.
+
 **Run it for real.** This also needs Docker for Redis and Postgres.
 
 ```bash

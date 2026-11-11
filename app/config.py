@@ -47,6 +47,11 @@ class Settings:
     notify_webhook_url: str | None = None
     public_base_url: str = "http://localhost:8000"
 
+    # Where model calls go: "api" (needs ANTHROPIC_API_KEY) or "cli" (a local assistant CLI
+    # signed in with your own account; set AGENT_CLI to its command).
+    llm_backend: str = "api"
+    agent_cli: str = ""
+
     # Look the business up on the web before research (needs a model that supports web search).
     web_lookup: bool = True
     web_lookup_max_searches: int = 5
@@ -88,6 +93,8 @@ class Settings:
             notify_webhook_url=os.getenv("NOTIFY_WEBHOOK_URL") or None,
             public_base_url=_env("PUBLIC_BASE_URL", cls.public_base_url),
             demo=_env("AGENCY_DEMO", "0").lower() in ("1", "true"),
+            llm_backend=_env("LLM_BACKEND", cls.llm_backend).lower(),
+            agent_cli=_env("AGENT_CLI", cls.agent_cli),
             web_lookup=_env("WEB_LOOKUP", "true").lower() in ("1", "true"),
             web_lookup_max_searches=int(_env("WEB_LOOKUP_MAX_SEARCHES", str(cls.web_lookup_max_searches))),
             log_level=_env("LOG_LEVEL", cls.log_level),

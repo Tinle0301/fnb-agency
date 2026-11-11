@@ -1,12 +1,22 @@
-"""Model API access behind a small interface, so agents can be tested with a fake."""
+"""Model access behind a small interface, so agents can be tested with a fake.
+
+Two backends: the model API (AnthropicLLM, needs an API key) and a local assistant CLI
+(CliLLM, uses that tool's own sign-in).
+"""
 
 from __future__ import annotations
 
+import asyncio
+import json
+import re
+import shlex
+import tempfile
 from dataclasses import dataclass
+from urllib.parse import urlparse
 from typing import Generic, Protocol, TypeVar
 
 import anthropic
-from pydantic import BaseModel
+from pydantic import BaseModel, ValidationError
 
 T = TypeVar("T", bound=BaseModel)
 
@@ -157,3 +167,84 @@ class AnthropicLLM:
         if not text:
             raise LLMError("web lookup returned no text")
         return SearchResult(text, sources[:12], model, input_tokens, output_tokens, searches)
+
+
+_URL = re.compile(r"https?://[^\s)>\]\"']+")
+
+
+class CliLLM:
+    """Runs every model call through a desktop assistant's command-line tool in headless print mode.
+
+    The CLI uses its own sign-in (for example a personal subscription), so no API key is needed.
+    Set LLM_BACKEND=cli and AGENT_CLI to the command in .env. Each call runs in an empty temporary
+    folder with no tools (or only web search for lookups), so it cannot touch files.
+    """
+
+    def __init__(self, command: str, timeout_s: int = 900) -> None:
+        if not command.strip():
+            raise ValueError("Set AGENT_CLI in .env to the command of the assistant CLI")
+        self._command = shlex.split(command)
+        self._timeout_s = timeout_s
+
+    async def _run(self, prompt: str, args: list[str]) -> dict:
+        with tempfile.TemporaryDirectory(prefix="fnb-agency-") as cwd:
+            proc = await asyncio.create_subprocess_exec(
+                *self._command, "-p", "--output-format", "json", "--no-session-persistence",
+                "--strict-mcp-config", *args,
+                stdin=asyncio.subprocess.PIPE, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE,
+                cwd=cwd,
+            )
+            try:
+                out, err = await asyncio.wait_for(proc.communicate(prompt.encode()), self._timeout_s)
+            except asyncio.TimeoutError:
+                proc.kill()
+                raise LLMError(f"assistant CLI took longer than {self._timeout_s}s")
+        try:
+            data = json.loads(out.decode() or "{}")
+        except json.JSONDecodeError:
+            raise LLMError(f"assistant CLI did not return JSON (exit {proc.returncode}): {err.decode()[-400:]}")
+        if proc.returncode != 0 or data.get("is_error"):
+            raise LLMError(f"assistant CLI failed: {str(data.get('result') or err.decode())[-400:]}")
+        return data
+
+    @staticmethod
+    def _tokens(data: dict) -> tuple[int, int]:
+        u = data.get("usage") or {}
+        return (
+            int(u.get("input_tokens", 0)) + int(u.get("cache_creation_input_tokens", 0)) + int(u.get("cache_read_input_tokens", 0)),
+            int(u.get("output_tokens", 0)),
+        )
+
+    async def generate(self, *, system, prompt, output_type, model, effort=None, max_tokens=16000):
+        args = ["--model", model, "--system-prompt", system, "--tools", "",
+                "--json-schema", json.dumps(output_type.model_json_schema())]
+        if effort:
+            args += ["--effort", effort]
+        data = await self._run(prompt, args)
+        raw = data.get("structured_output")
+        if raw is None:
+            raise LLMError("assistant CLI returned no structured output")
+        try:
+            output = output_type.model_validate(raw)
+        except ValidationError as exc:
+            raise LLMError(f"assistant CLI output did not match the schema: {exc}") from exc
+        tokens_in, tokens_out = self._tokens(data)
+        return LLMResult(output=output, model=model, input_tokens=tokens_in, output_tokens=tokens_out,
+                         stop_reason=data.get("stop_reason"))
+
+    async def search(self, *, system, prompt, model, max_searches=5):
+        args = ["--model", model, "--system-prompt", system, "--tools", "WebSearch,WebFetch",
+                "--allowedTools", "WebSearch", "WebFetch"]
+        data = await self._run(
+            f"{prompt}\n\nUse at most {max_searches} web searches. End with a line 'Sources:' and then one URL per line.",
+            args,
+        )
+        text = str(data.get("result") or "").strip()
+        if not text:
+            raise LLMError("web lookup returned no text")
+        body, _, tail = text.rpartition("Sources:")
+        urls = list(dict.fromkeys(_URL.findall(tail if body else text)))[:12]
+        sources = [{"title": urlparse(u).netloc or u, "url": u} for u in urls]
+        searches = int(((data.get("usage") or {}).get("server_tool_use") or {}).get("web_search_requests", 0))
+        tokens_in, tokens_out = self._tokens(data)
+        return SearchResult((body or text).strip(), sources, model, tokens_in, tokens_out, searches)

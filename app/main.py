@@ -19,7 +19,7 @@ from app.exports import (
     seo_brief_md,
     slugify,
 )
-from app.llm import LLM, AnthropicLLM
+from app.llm import LLM, AnthropicLLM, CliLLM
 from app.logging_setup import configure_logging, get_logger
 from app.memory.facts import BrandMemory, InMemoryBrandMemory, PostgresBrandMemory
 from app.memory.session import InMemorySessionStore, RedisSessionStore, SessionStore
@@ -109,6 +109,8 @@ async def build_orchestrator(settings: Settings, llm: LLM | None = None) -> Orch
         llm = DemoLLM()
     if llm is None and not (settings.agent_model and settings.extractor_model):
         raise RuntimeError("Set AGENCY_MODEL and EXTRACTOR_MODEL in .env (or AGENCY_DEMO=1 to try without a model).")
+    if llm is None and settings.llm_backend == "cli":
+        llm = CliLLM(settings.agent_cli)
     return Orchestrator(
         llm or AnthropicLLM(use_refusal_fallbacks=settings.use_refusal_fallbacks),
         sessions,
