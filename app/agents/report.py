@@ -10,7 +10,9 @@ Identity (you may add others), an executive summary of 250 words or fewer, and c
 steps. Write in clear Markdown for a business owner, not an agency insider.
 
 Do not introduce new claims, numbers or creative ideas that are not in the source deliverables. \
-Never leave placeholders."""
+Never leave placeholders. Research's data tables (market facts, online presence, competitors, \
+each with its source) are added to the report automatically after your sections, so refer to \
+them instead of repeating the figures in prose."""
     output_type = ReportOutput
 
     def build_prompt(self, ctx: AgentContext) -> str:

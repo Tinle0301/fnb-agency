@@ -40,6 +40,7 @@ from app.schemas import (
     IdentityOutput,
     MessagingOutput,
     ReportOutput,
+    ResearchOutput,
     Run,
     RunEvent,
     RunStatus,
@@ -210,7 +211,8 @@ def create_app(orchestrator: Orchestrator | None = None, settings: Settings | No
         run = await load(run_id, o)
         if "report" not in run.outputs:
             raise HTTPException(404, "report not produced yet")
-        return report_markdown(ReportOutput.model_validate(run.outputs["report"]))
+        research = ResearchOutput.model_validate(run.outputs["research"]) if "research" in run.outputs else None
+        return report_markdown(ReportOutput.model_validate(run.outputs["report"]), research)
 
     @app.get("/runs/{run_id}/design-system")
     async def design_system(run_id: str, o: Orchestrator = Depends(orch)) -> dict[str, Any]:

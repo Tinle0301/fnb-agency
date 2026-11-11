@@ -515,6 +515,12 @@ function pipeline(run, events, openCp) {
   ).join('') + '</div>';
 }
 
+const PRES = {found:'<span class="pill ok">Found</span>', not_found:'<span class="pill warn">Not found</span>', unverified:'<span class="pill">Not confirmed</span>'};
+function srcLink(u) { // only real http(s) links; the host is the link text
+  if (!u || !/^https?:\/\//i.test(u)) return '<span class="hint">no source</span>';
+  let host = u; try { host = new URL(u).hostname.replace(/^www\./, ''); } catch (e) { return '<span class="hint">no source</span>'; }
+  return `<a href="${esc(u)}" target="_blank" rel="noopener noreferrer">${esc(host)}</a>`;
+}
 const R = {
   research(o, run) {
     const p = o.business_profile, g = f => run?.inferred?.includes(f) ? '<span class="guess">worked out from the name</span>' : '';
@@ -522,11 +528,15 @@ const R = {
         <tr><th scope="row">Location</th><td>${esc(p.location)}${g('location')}</td></tr><tr><th scope="row">Audience</th><td>${esc(p.target_audience)}${g('target_audience')}</td></tr>
         <tr><th scope="row">Goals</th><td>${list(p.goals)}${g('goals')}</td></tr></table><p class="hint" style="margin-top:6px">${esc(p.basis)}</p></div>` : ''}
       ${lookupBlock(run)}
-      <div class="sec"><h3>Market</h3><p>${esc(o.market_summary)}</p></div>
+      <div class="sec"><h3>Market</h3><div class="md">${md(o.market_summary)}</div></div>
+      ${(o.market_facts || []).length ? `<div class="sec"><h3>Market data</h3><div class="tw"><table><tr><th scope="col">What</th><th scope="col">Finding</th><th scope="col">Source</th></tr>
+        ${o.market_facts.map(f => `<tr><td><b>${esc(f.topic)}</b></td><td>${esc(f.value)}</td><td>${srcLink(f.source_url)}</td></tr>`).join('')}</table></div></div>` : ''}
+      ${(o.online_presence || []).length ? `<div class="sec"><h3>Online presence</h3><div class="tw"><table><tr><th scope="col">Channel</th><th scope="col">Status</th><th scope="col">Details</th><th scope="col">Source</th></tr>
+        ${o.online_presence.map(x => `<tr><td><b>${esc(x.channel)}</b></td><td>${PRES[x.status] || ''}</td><td>${esc(x.detail)}</td><td>${srcLink(x.source_url)}</td></tr>`).join('')}</table></div></div>` : ''}
       <div class="sec"><h3>Audience insights</h3><div class="mini">${o.audience_insights.map(i => `<div><b>${esc(i.insight)}</b>
         <div class="hint" style="margin:4px 0">${esc(i.evidence)}</div><span class="pill ${i.confidence === 'high' ? 'ok' : i.confidence === 'medium' ? 'info' : 'warn'}">${esc(i.confidence)} confidence</span></div>`).join('')}</div></div>
-      <div class="sec"><h3>Competitors</h3><table><tr><th>Name</th><th>Their positioning</th><th>Gap we can own</th></tr>
-        ${o.competitor_landscape.map(c => `<tr><td><b>${esc(c.name)}</b></td><td>${esc(c.positioning)}</td><td>${esc(c.gap_we_can_own)}</td></tr>`).join('')}</table></div>
+      <div class="sec"><h3>Competitors</h3><div class="tw"><table><tr><th scope="col">Name</th><th scope="col">Where</th><th scope="col">Their positioning</th><th scope="col">Gap we can own</th><th scope="col">Source</th></tr>
+        ${o.competitor_landscape.map(c => `<tr><td><b>${esc(c.name)}</b></td><td>${esc(c.where || '')}</td><td>${esc(c.positioning)}</td><td>${esc(c.gap_we_can_own)}</td><td>${srcLink(c.source_url)}</td></tr>`).join('')}</table></div></div>
       <div class="sec"><h3>Category trends</h3>${chips(o.category_trends)}</div>
       <div class="sec"><h3>Regulatory notes</h3>${list(o.regulatory_notes)}</div>`;
   },

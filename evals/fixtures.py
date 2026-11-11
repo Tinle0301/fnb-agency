@@ -64,6 +64,14 @@ BREWERY_RESEARCH = ResearchOutput(
         "traffic in summer while locals sustain it the rest of the year, so a brewery that wins locals "
         "has steadier revenue."
     ),
+    market_facts=[
+        {"topic": "Breweries in Portland", "value": "About 20 within the city", "source_url": "https://www.visitportland.com/"},
+        {"topic": "Peak season", "value": "Summer cruise season drives waterfront traffic", "source_url": ""},
+    ],
+    online_presence=[
+        {"channel": "Website", "status": "unverified", "detail": "Not checked yet", "source_url": ""},
+        {"channel": "Instagram", "status": "not_found", "detail": "No account found under the brewery name", "source_url": ""},
+    ],
     audience_insights=[
         {
             "insight": "Locals avoid taprooms that feel built for cruise-ship crowds.",
@@ -84,13 +92,17 @@ BREWERY_RESEARCH = ResearchOutput(
     competitor_landscape=[
         {
             "name": "Allagash",
+            "where": "Portland, about 5 km from the waterfront",
             "positioning": "Belgian-style pioneer with a polished, heritage feel.",
             "gap_we_can_own": "A working-waterfront voice that is rougher and more local.",
+            "source_url": "https://www.allagash.com/",
         },
         {
             "name": "Bissell Brothers",
+            "where": "Portland",
             "positioning": "Hype-driven hazy IPAs with bold graphic cans.",
             "gap_we_can_own": "Calm, maritime confidence instead of hype.",
+            "source_url": "",
         },
     ],
     category_trends=["Lower-ABV session beers", "Local grain sourcing", "Taproom events over distribution"],

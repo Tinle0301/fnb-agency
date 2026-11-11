@@ -64,8 +64,27 @@ class AudienceInsight(BaseModel):
 
 class CompetitorNote(BaseModel):
     name: str
+    where: str = Field(description="Area or distance from the client, e.g. '1.8 km away' or 'Westminster'. Empty if unknown.")
     positioning: str
     gap_we_can_own: str
+    source_url: str = Field(description="Exact URL of the page this comes from, copied from the web lookup. Empty string when no source shows it; never invent one.")
+
+
+class MarketFact(BaseModel):
+    """One checkable data point about the client: a rating, review count, ranking, price, press mention."""
+
+    topic: str = Field(description="Short label, e.g. 'Yelp rating', 'Press', 'Price level'.")
+    value: str = Field(description="The figure or fact as the source states it, e.g. '4.4 stars from about 560 reviews'.")
+    source_url: str = Field(description="Exact URL of the page this comes from, copied from the web lookup. Empty string when no source shows it; never invent one.")
+
+
+class PresenceItem(BaseModel):
+    """One place the business could be found online: its website, a social account or a listing."""
+
+    channel: str = Field(description="e.g. Website, Instagram, Facebook, TikTok, Google Maps, Yelp.")
+    status: Literal["found", "not_found", "unverified"]
+    detail: str = Field(description="Handle or address, followers, claimed or not, what it shows. Empty if not found.")
+    source_url: str = Field(description="Exact URL of the page this comes from, copied from the web lookup. Empty string when no source shows it; never invent one.")
 
 
 class ClarifyingQuestion(BaseModel):
@@ -87,7 +106,12 @@ class ResearchOutput(BaseModel):
         description="The brief's business type, location, audience and goals: copied when the brief gives them, "
         "your best reading of the business when it leaves them blank."
     )
-    market_summary: str
+    market_summary: str = Field(
+        description="Three to five sentences of interpretation. Every number, rating, review count, listing and "
+        "account goes in market_facts, online_presence or competitor_landscape, not here."
+    )
+    market_facts: list[MarketFact]
+    online_presence: list[PresenceItem]
     audience_insights: list[AudienceInsight]
     competitor_landscape: list[CompetitorNote]
     category_trends: list[str]

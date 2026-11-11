@@ -27,6 +27,7 @@ import io
 import json
 import re
 import zipfile
+from urllib.parse import urlparse
 
 from app.checks import CONTRAST_PAIRS, contrast_ratio
 from app.schemas import (
@@ -36,6 +37,7 @@ from app.schemas import (
     ReportOutput,
     SemanticTokens,
     StrategyOutput,
+    ResearchOutput,
 )
 
 
@@ -44,12 +46,52 @@ def slugify(text: str) -> str:
     return slug or "brand"
 
 
-def report_markdown(report: ReportOutput) -> str:
+def report_markdown(report: ReportOutput, research: ResearchOutput | None = None) -> str:
     parts = [f"# {report.title}", "", "## Executive summary", "", report.executive_summary, ""]
     for section in report.sections:
         parts += [f"## {section.heading}", "", section.body_markdown.strip(), ""]
+    if research is not None:
+        parts += research_tables_md(research)
     parts += ["## Next steps", ""] + [f"- {step}" for step in report.next_steps]
     return "\n".join(parts).strip() + "\n"
+
+
+def _cell(text: str) -> str:
+    return " ".join(str(text).split()).replace("|", "\\|") or "–"
+
+
+def _source(url: str) -> str:
+    if not url.startswith(("https://", "http://")):
+        return "no source"
+    host = re.sub(r"^www\.", "", urlparse(url).netloc) or url
+    return f"[{_cell(host)}]({url.replace(')', '%29').replace(' ', '%20')})"
+
+
+PRESENCE_STATUS = {"found": "Found", "not_found": "Not found", "unverified": "Not confirmed"}
+
+
+def research_tables_md(research: ResearchOutput) -> list[str]:
+    """Research's data as Markdown tables, one source link per row (generated in code, not by a model)."""
+    out = ["## Market data and sources", ""]
+    if research.market_facts:
+        out += ["| What | Finding | Source |", "|---|---|---|"]
+        out += [f"| {_cell(f.topic)} | {_cell(f.value)} | {_source(f.source_url)} |" for f in research.market_facts]
+        out.append("")
+    if research.online_presence:
+        out += ["### Online presence", "", "| Channel | Status | Details | Source |", "|---|---|---|---|"]
+        out += [
+            f"| {_cell(p.channel)} | {PRESENCE_STATUS.get(p.status, p.status)} | {_cell(p.detail)} | {_source(p.source_url)} |"
+            for p in research.online_presence
+        ]
+        out.append("")
+    if research.competitor_landscape:
+        out += ["### Competitors", "", "| Competitor | Where | Positioning | Gap we can own | Source |", "|---|---|---|---|---|"]
+        out += [
+            f"| {_cell(c.name)} | {_cell(c.where)} | {_cell(c.positioning)} | {_cell(c.gap_we_can_own)} | {_source(c.source_url)} |"
+            for c in research.competitor_landscape
+        ]
+        out.append("")
+    return out
 
 
 def design_md(

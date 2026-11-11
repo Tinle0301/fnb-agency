@@ -265,3 +265,30 @@ def check_report(report: ReportOutput, alcohol: bool = False) -> list[Finding]:
     if alcohol:
         findings += alcohol_marketing(text, "report")
     return findings
+
+
+# --------------------------------------------------------------------------- sources
+
+_URL_IN_TEXT = re.compile(r"https?://[^\s)>\]\"'<]+")
+
+
+def _norm_url(url: str) -> str:
+    return url.strip().rstrip(".,;").rstrip("/").lower()
+
+
+def strip_unknown_sources(research, lookup: dict | None) -> int:
+    """Clear every source_url in research that the web lookup did not actually return.
+
+    A model can write a plausible link it never saw; a row then shows "no source" instead of
+    a made-up citation. Returns how many links were cleared. Mutates `research` in place.
+    """
+    known: set[str] = set()
+    if lookup:
+        known |= {_norm_url(u) for u in _URL_IN_TEXT.findall(lookup.get("summary", ""))}
+        known |= {_norm_url(s.get("url", "")) for s in lookup.get("sources", [])}
+    cleared = 0
+    for row in [*research.market_facts, *research.online_presence, *research.competitor_landscape]:
+        if row.source_url and _norm_url(row.source_url) not in known:
+            row.source_url = ""
+            cleared += 1
+    return cleared

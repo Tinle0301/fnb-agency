@@ -290,7 +290,11 @@ class Orchestrator:
             if lookup:
                 ctx.extra["web_lookup"] = lookup
             result = await self._timed(run, self.research, ctx)
-            run.outputs["research"] = result.output.model_dump()
+            research_out = result.output.model_copy(deep=True)
+            cleared = checks.strip_unknown_sources(research_out, run.outputs.get("lookup") if lookup else None)
+            if cleared:
+                log.warning("research.unknown_sources_cleared", count=cleared)
+            run.outputs["research"] = research_out.model_dump()
             self._fill_brief(run, result.output.business_profile)
         elif run.stage is Stage.strategy:
             result = await self._run_agent(run, self.strategist, run.feedback.get("strategy", []))
