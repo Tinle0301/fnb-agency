@@ -31,11 +31,11 @@ docker compose up -d      # Redis (session memory) + Postgres (brand memory)
 uvicorn app.main:app
 ```
 
-Open **http://localhost:8000**. The top bar says "demo" or "live" and which storage the dashboard is using.
+Open **http://localhost:8000**. In demo mode the top bar says "Demo mode", and every report is the same sample brewery whatever name you type.
 
 ## 2. Find your way around
 
-Type a business name on **Reports** and press **Analyze brand**. The Research Analyst works out what the business is (type, city, audience, goals) and researches its market; you check what it found, then the other agents write the strategy, messaging, visual identity and report, and you sign it off. Add the city if the name is common. The agents only know what the model already knows about a business (they do not browse the web), so check the research carefully for small or new businesses.
+Type a business name on **Reports** and press **Analyze brand**. The Research Analyst works out what the business is (type, city, audience, goals) and researches its market; you check what it found, then the other agents write the strategy, messaging, visual identity and report, and you sign it off. Add the city if the name is common. Before researching, the Research Analyst looks the business up on the web; the research check shows what it found and its sources. If it picked the wrong business, press **Request changes** and say which one (city, street or website): it looks it up again with your note.
 
 The tabs:
 
@@ -112,6 +112,7 @@ Set these in `.env`:
 
 | Setting | What it does |
 |---|---|
+| `WEB_LOOKUP` | `true` (default) looks the business up on the web before research. Uses web search on your API account. `WEB_LOOKUP_MAX_SEARCHES` caps searches per lookup (default 5). |
 | `AGENCY_CHECKPOINTS` | Which reviews open. Default `research,final`: you check the research, then sign off the report. Add `strategy` and `creative` for more stops. Leave out `creative` and the recommended identity direction is used without asking. Final sign-off is always on. |
 | `MAX_QA_REVISIONS` | How many times QA can send work back before it escalates to you. Default 2. |
 | `NOTIFY_WEBHOOK_URL` | A Slack incoming webhook (or any webhook) to ping you when an engagement needs you. |

@@ -47,6 +47,10 @@ class Settings:
     notify_webhook_url: str | None = None
     public_base_url: str = "http://localhost:8000"
 
+    # Look the business up on the web before research (needs a model that supports web search).
+    web_lookup: bool = True
+    web_lookup_max_searches: int = 5
+
     # Canned outputs instead of the model API (see app/demo.py).
     demo: bool = False
 
@@ -84,5 +88,7 @@ class Settings:
             notify_webhook_url=os.getenv("NOTIFY_WEBHOOK_URL") or None,
             public_base_url=_env("PUBLIC_BASE_URL", cls.public_base_url),
             demo=_env("AGENCY_DEMO", "0").lower() in ("1", "true"),
+            web_lookup=_env("WEB_LOOKUP", "true").lower() in ("1", "true"),
+            web_lookup_max_searches=int(_env("WEB_LOOKUP_MAX_SEARCHES", str(cls.web_lookup_max_searches))),
             log_level=_env("LOG_LEVEL", cls.log_level),
         )

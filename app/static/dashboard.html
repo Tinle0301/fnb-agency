@@ -310,7 +310,7 @@ const ICON = {
 const svgIcon = (k, size = 16) => `<svg viewBox="0 0 24 24" width="${size}" height="${size}" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICON[k]}</svg>`;
 // The specialists in pipeline order, with what each does for a report.
 const AG = [
-  {id:'research', keys:['research_analyst'], name:'Research Analyst', job:'Works out the business from its name, then the market, audience and competitors.'},
+  {id:'research', keys:['research_analyst'], name:'Research Analyst', job:'Looks the business up on the web, then researches its market, audience and competitors.'},
   {id:'strategist', keys:['brand_strategist'], name:'Brand Strategist', job:'Positioning, brand promise and pillars, each traced to evidence.'},
   {id:'messaging', keys:['messaging_lead'], name:'Messaging Lead', job:'Taglines, tone of voice and sample copy.'},
   {id:'identity', keys:['identity_direction', 'identity_refiner'], name:'Identity Direction', job:'Three visual directions with colors and type that pass contrast.'},
@@ -364,6 +364,7 @@ function reasonLine(e, run) {
     case 'qa.routed_revision': return [`QA sent work back to the ${an}`, (d.issues || [])[0]];
     case 'qa.escalated': return ['QA still not passing', `After ${d.attempts} attempts it is your call at sign-off.`];
     case 'facts.saved': return ['Brand memory updated', `${d.active} facts saved, ${d.pending} for you to confirm.`];
+    case 'research.lookup': return d.ok ? ['Looked the business up on the web', `${d.sources} sources from ${d.searches} searches.`] : ['Web lookup failed', 'Research worked from the name alone; check it carefully.'];
     case 'stage.failed': return ['A step failed', d.error];
     case 'run.completed': return ['Report signed off', 'The report and design files are ready to download.'];
   }
@@ -404,6 +405,7 @@ async function overview() {
         <button type="submit" class="primary" id="s-go">Analyze brand</button>
       </div>
       <p class="hint">You check what research found before the strategy starts, then sign off the finished report. Know more about the client? <a href="#/new">Add a full brief</a>.</p>
+      ${SETTINGS?.demo ? '<div class="banner info" style="margin:12px 0 0"><div><b>Demo mode is on.</b> Every report is the same sample brewery, whatever name you type. Turn it off (AGENCY_DEMO=0 with your API key) to analyze a real business.</div></div>' : ''}
     </form>
     <div class="board"><section class="card" id="reports" aria-live="polite"><p class="muted">Loading reports…</p></section><aside class="card side" id="side"></aside></div>`;
   $('#start').onsubmit = async e => {
@@ -519,6 +521,7 @@ const R = {
     return `${p ? `<div class="sec"><h3>The business</h3><table><tr><th scope="row">Type</th><td>${esc(p.business_type)}${g('business_type')}</td></tr>
         <tr><th scope="row">Location</th><td>${esc(p.location)}${g('location')}</td></tr><tr><th scope="row">Audience</th><td>${esc(p.target_audience)}${g('target_audience')}</td></tr>
         <tr><th scope="row">Goals</th><td>${list(p.goals)}${g('goals')}</td></tr></table><p class="hint" style="margin-top:6px">${esc(p.basis)}</p></div>` : ''}
+      ${lookupBlock(run)}
       <div class="sec"><h3>Market</h3><p>${esc(o.market_summary)}</p></div>
       <div class="sec"><h3>Audience insights</h3><div class="mini">${o.audience_insights.map(i => `<div><b>${esc(i.insight)}</b>
         <div class="hint" style="margin:4px 0">${esc(i.evidence)}</div><span class="pill ${i.confidence === 'high' ? 'ok' : i.confidence === 'medium' ? 'info' : 'warn'}">${esc(i.confidence)} confidence</span></div>`).join('')}</div></div>
@@ -588,6 +591,16 @@ const R = {
         ${auto.map(f => `<tr><td>${sev(f.severity)}</td><td><code>${esc(f.location)}</code></td><td>${esc(f.problem)}</td></tr>`).join('')}</table>` : '<p class="muted">All checks passed: no health claims, placeholders, unsourced metrics, or contrast failures.</p>'}</div>`;
   },
 };
+function lookupBlock(run) {
+  const l = run?.outputs.lookup;
+  if (SETTINGS?.demo) return '<div class="banner info"><div><b>Demo mode.</b> Every report uses the same sample brewery, whatever name you type, and nothing is looked up. Turn demo mode off to analyze a real business.</div></div>';
+  if (!l) return '<div class="banner bad"><div><b>The business was not looked up on the web.</b> Everything above is the model\'s own guess from the name. Check it, or send it back with the city or website.</div></div>';
+  const safe = u => /^https?:\/\//.test(u) ? u : '#';
+  return `<div class="sec"><h3>What the web lookup found</h3><details><summary>${l.sources.length} source${l.sources.length === 1 ? '' : 's'} from ${l.searches} search${l.searches === 1 ? '' : 'es'}</summary>
+    <div class="md" style="margin-top:8px">${md(l.summary)}</div>
+    ${l.sources.length ? `<ul>${l.sources.map(x => `<li><a href="${esc(safe(x.url))}" target="_blank" rel="noopener noreferrer">${esc(x.title)}</a></li>`).join('')}</ul>` : ''}</details>
+    <p class="hint">Wrong business? Request changes and say which one (city, street or website). Research looks it up again.</p></div>`;
+}
 function themePreview(t, typo, label, compact) {
   const d = esc(typo.display), b = esc(typo.body);
   return `<div class="preview" style="background:${esc(t.bg)};color:${esc(t.fg)}"><div class="p-in">

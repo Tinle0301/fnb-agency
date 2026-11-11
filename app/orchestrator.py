@@ -21,6 +21,7 @@ After final approval the fact extractor stores durable facts in long-term memory
 from __future__ import annotations
 
 import asyncio
+import time
 from typing import Any
 
 from pydantic import BaseModel
@@ -38,6 +39,7 @@ from app.agents import (
 from app.agents.base import Agent, AgentContext, AgentResult
 from app.config import Settings
 from app.llm import LLM
+from app.agents.research import LOOKUP_SYSTEM, lookup_prompt
 from app.logging_setup import get_logger, log_context
 from app.memory.extractor import FactExtractor, triage_facts
 from app.memory.facts import BrandMemory
@@ -282,7 +284,12 @@ class Orchestrator:
         log.info("stage.started")
         await self._event(run, "stage.started")
         if run.stage is Stage.research:
-            result = await self._run_agent(run, self.research, run.feedback.get("research", []))
+            feedback = run.feedback.get("research", [])
+            ctx = await self._context(run, feedback, extra={"inferred": list(run.inferred)})
+            lookup = await self._web_lookup(run, ctx)
+            if lookup:
+                ctx.extra["web_lookup"] = lookup
+            result = await self._timed(run, self.research, ctx)
             run.outputs["research"] = result.output.model_dump()
             self._fill_brief(run, result.output.business_profile)
         elif run.stage is Stage.strategy:
@@ -432,6 +439,42 @@ class Orchestrator:
         run.outputs["facts"] = summary
         log.info("facts.saved", **summary)
         await self._event(run, "facts.saved", detail=summary)
+
+    async def _web_lookup(self, run: Run, ctx: AgentContext) -> str | None:
+        """Look the business up on the web so research starts from the real business, not a guess.
+
+        A failed lookup is logged and skipped: research then works from the name alone and says so.
+        """
+        search = getattr(self.research.llm, "search", None)
+        if not self.settings.web_lookup or search is None:
+            return None
+        started = time.perf_counter()
+        try:
+            found = await search(
+                system=LOOKUP_SYSTEM,
+                prompt=lookup_prompt(ctx),
+                model=self.research.model,
+                max_searches=self.settings.web_lookup_max_searches,
+            )
+        except Exception as exc:
+            log.warning("research.lookup_failed", error=f"{type(exc).__name__}: {exc}")
+            await self._event(run, "research.lookup", detail={"ok": False, "error": f"{type(exc).__name__}: {exc}"})
+            return None
+        run.usage["input_tokens"] += found.input_tokens
+        run.usage["output_tokens"] += found.output_tokens
+        run.outputs["lookup"] = {"summary": found.text, "sources": found.sources, "searches": found.searches}
+        await self._event(
+            run,
+            "research.lookup",
+            detail={
+                "ok": True,
+                "sources": len(found.sources),
+                "searches": found.searches,
+                "latency_ms": int((time.perf_counter() - started) * 1000),
+            },
+        )
+        log.info("research.lookup", sources=len(found.sources), searches=found.searches)
+        return found.text
 
     @staticmethod
     def _fill_brief(run: Run, profile: BusinessProfile) -> None:
