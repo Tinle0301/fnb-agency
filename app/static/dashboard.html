@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Agency Dashboard</title>
+<title>F&amp;B Agency Dashboard</title>
 <style>
   /* Visual language follows the Rề Cà Phê brand dashboard (Tinle0301/recaphe-dashboard). */
   :root {
@@ -12,6 +12,14 @@
     --g:#2f9e6b; --g-soft:#e2f3ea; --a:#b5851f; --a-soft:#faf0d8; --r:#d8593f; --r-soft:#f7e1da; --i:#3d6f8e; --i-soft:#e1ecf3;
     --font-display:Georgia, "Times New Roman", serif;
     --font-body:-apple-system, BlinkMacSystemFont, "Segoe UI", Inter, Arial, sans-serif;
+    --font-mono:ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+    --brand-ink:#8a5d36; --focus:#bb8350; --tag:#eceae4;
+    --g-ink:#23744f; --a-ink:#7d5c12; --r-ink:#a83f2a; --i-ink:#336079;
+    /* one hue per agent on the terminal overview; each passes 4.5:1 as text on white and on paper */
+    --ag-research:#2f6487; --ag-strategist:#6a4a8c; --ag-messaging:#8f6212; --ag-identity:#b04a33;
+    --ag-report:#2b7a55; --ag-qa:#9e3346; --ag-memory:#566070; --ag-you:#17150f;
+    --sp-2:8px; --sp-3:12px; --sp-4:16px; --sp-6:24px; --sp-8:32px; --r-sm:6px;
+    --shadow-float:0 8px 24px rgba(20,19,15,.18);
   }
   * { box-sizing:border-box; }
   html, body { margin:0; }
@@ -20,16 +28,9 @@
   h1, h2, h3 { margin:0; }
   .wrap { max-width:1300px; margin:0 auto; padding:0 24px; }
   /* header + nav */
-  header.top { background:linear-gradient(115deg,#241f17,#14130f); color:#fff; padding:26px 0 20px; }
-  header.top .ey { font-size:11px; letter-spacing:3.5px; text-transform:uppercase; color:var(--brand2); font-weight:700; }
-  header.top h1 { font:800 30px var(--font-display); letter-spacing:.5px; margin-top:6px; }
-  header.top .sub { color:#c8c2b6; font-size:13.5px; margin-top:8px; max-width:880px; }
-  header.top .note { margin-top:11px; font-size:12px; color:#c8c2b6; background:rgba(255,255,255,.05); border:1px solid rgba(255,255,255,.08); border-radius:8px; padding:7px 12px; display:inline-block; }
-  nav.bar { position:sticky; top:0; z-index:60; background:rgba(20,19,15,.97); backdrop-filter:blur(8px); border-bottom:1px solid #2c281f; }
+  nav.bar { position:sticky; top:0; z-index:60; backdrop-filter:blur(8px); }
   nav.bar .inner { display:flex; overflow-x:auto; max-width:1300px; margin:0 auto; padding:0 14px; }
-  nav.bar a { flex:0 0 auto; color:#ada695; font-size:12.5px; font-weight:600; padding:11px 12px; text-decoration:none; border-bottom:3px solid transparent; white-space:nowrap; display:flex; gap:6px; align-items:center; }
-  nav.bar a:hover { color:#fff; } nav.bar a.on { color:#fff; border-bottom-color:var(--brand2); }
-  nav.bar .count { background:var(--brand2); color:#14130f; border-radius:20px; font-size:10.5px; font-weight:800; padding:0 7px; }
+  nav.bar a { flex:0 0 auto; font-size:12.5px; font-weight:600; padding:11px 12px; text-decoration:none; border-bottom:3px solid transparent; white-space:nowrap; display:flex; gap:6px; align-items:center; }
   main { padding:26px 0 40px; animation:f .3s ease; }
   @keyframes f { from { opacity:0; transform:translateY(6px); } to { opacity:1; transform:none; } }
   /* section heads */
@@ -144,17 +145,161 @@
   .toast { position:fixed; bottom:20px; right:20px; background:var(--navy); color:#fff; padding:10px 16px; border-radius:10px; font-weight:600; font-size:13px; display:none; z-index:90; border-left:4px solid var(--brand2); }
   .muted { color:var(--ink2); }
   .foot { color:var(--ink2); font-size:11.5px; text-align:center; padding:8px 0 40px; }
+  /* ---------------------------------------------------------------- agent terminal (overview) */
+  .titlebar { background:var(--panel); border-bottom:1px solid var(--line); }
+  .tb-in { display:flex; align-items:center; gap:14px; min-height:40px; font:12.5px var(--font-mono); color:var(--ink2); }
+  .lights { display:flex; gap:7px; flex:none; } .lights i { width:12px; height:12px; border-radius:50%; background:var(--r); }
+  .lights i:nth-child(2) { background:var(--a); } .lights i:nth-child(3) { background:var(--g); }
+  .tb-t { flex:1; text-align:center; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .tb-mode { flex:none; border:1px solid var(--line); border-radius:var(--r-sm); padding:1px 8px; color:var(--i-ink); font-weight:700; }
+  nav.bar { background:rgba(243,241,236,.97); border-bottom:1px solid var(--line); }
+  nav.bar a { color:var(--ink2); } nav.bar a:hover { color:var(--ink); } nav.bar a.on { color:var(--ink); border-bottom-color:var(--brand); }
+  nav.bar .count { background:var(--brand); color:#fff; border-radius:20px; font-size:12px; font-weight:800; padding:0 7px; }
+  .mono { font-family:var(--font-mono); }
+  .term { background:var(--panel); border:1px solid var(--line); border-radius:18px; padding:var(--sp-4); }
+  .term.loading { min-height:420px; display:grid; place-items:center; color:var(--ink2); font:13px var(--font-mono); }
+  .hero { display:grid; grid-template-columns:96px minmax(0,1fr) auto; gap:var(--sp-6); align-items:center; padding:var(--sp-2) var(--sp-2) var(--sp-4); border-bottom:1px solid var(--line); margin-bottom:var(--sp-4); }
+  .mark { width:96px; height:96px; } .mark .eye { transform-box:fill-box; transform-origin:center; animation:blink 6s infinite; }
+  @keyframes blink { 0%, 95%, 100% { transform:none; } 97% { transform:scaleY(.12); } }
+  .hero h1 { font:700 30px/1.15 var(--font-mono); letter-spacing:-.5px; display:flex; gap:12px; align-items:center; flex-wrap:wrap; }
+  .hero h1 .b { color:var(--brand-ink); }
+  .ver { font:700 12px var(--font-mono); border:1px solid var(--ink2); color:var(--ink2); border-radius:var(--r-sm); padding:1px 7px; letter-spacing:0; }
+  .tstat { font:15px var(--font-mono); margin-top:10px; display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+  .tstat .dot { width:9px; height:9px; }
+  .tstat.working { color:var(--i-ink); } .tstat.working .dot { animation:pulse 1.2s infinite; }
+  .tstat.waiting { color:var(--brand-ink); } .tstat.idle { color:var(--ink2); }
+  .tstat time { color:var(--ink); font-variant-numeric:tabular-nums; }
+  .lastev { display:inline-block; margin-top:10px; font:700 12px var(--font-mono); text-transform:uppercase; letter-spacing:.06em; color:var(--ink2); border:1px dashed var(--ink2); border-radius:var(--r-sm); padding:3px 10px; }
+  .motto { font:13px var(--font-mono); color:var(--ink2); margin-top:10px; }
+  .hstats { display:grid; grid-template-columns:auto auto; gap:var(--sp-3) var(--sp-8); text-align:right; font-family:var(--font-mono); }
+  .hstats .n { font-size:28px; font-weight:700; line-height:1.1; font-variant-numeric:tabular-nums; }
+  .hstats .n.big { font-size:44px; }
+  .hstats .l { font-size:12px; color:var(--ink2); }
+  .hstats .hot .n { color:var(--brand-ink); } .hstats .good .n { color:var(--g-ink); }
+  .tgrid { display:grid; grid-template-columns:300px minmax(0,1fr); gap:var(--sp-4); align-items:start; }
+  .tcol { display:grid; gap:var(--sp-3); }
+  .ph { display:flex; justify-content:space-between; align-items:baseline; gap:var(--sp-3); font:700 12px var(--font-mono); text-transform:uppercase; letter-spacing:.08em; color:var(--ink2); margin:0 2px var(--sp-3); }
+  .ph .r { font-weight:400; text-transform:none; letter-spacing:0; }
+  .tp { border:1px solid var(--line); border-radius:12px; padding:var(--sp-3) var(--sp-4); background:var(--panel); min-width:0; }
+  /* agent cards */
+  .ag { border:1px solid var(--line); border-radius:12px; padding:var(--sp-3); background:var(--panel); display:grid; gap:6px; transition:box-shadow .2s, border-color .2s; }
+  .ag.on { border:2px solid var(--ink); box-shadow:var(--shadow-float); padding:calc(var(--sp-3) - 1px); }
+  .ag-top { display:grid; grid-template-columns:36px minmax(0,1fr) auto; gap:10px; align-items:start; }
+  .ic { width:36px; height:36px; border-radius:10px; background:var(--c); color:#fff; display:grid; place-items:center; }
+  .an { font:700 16px/1.2 var(--font-mono); color:var(--c); text-transform:uppercase; letter-spacing:.02em; }
+  .ar { font-size:12.5px; color:var(--ink2); line-height:1.35; }
+  .bd { font:700 12px var(--font-mono); text-transform:uppercase; padding:1px 7px; border-radius:var(--r-sm); border:1px solid currentColor; white-space:nowrap; color:var(--ink2); background:var(--panel); }
+  .bd.working { color:var(--i-ink); background:var(--i-soft); } .bd.done, .bd.pass { color:var(--g-ink); background:var(--g-soft); }
+  .bd.flag { color:var(--a-ink); background:var(--a-soft); } .bd.failed { color:var(--r-ink); background:var(--r-soft); }
+  .bd.you { color:#fff; background:var(--brand); border-color:var(--brand); }
+  .rule { font-size:13px; font-weight:700; color:var(--c); margin-top:2px; }
+  .last { font:12.5px var(--font-mono); color:var(--ink); overflow-wrap:anywhere; }
+  /* flow */
+  .egs { display:flex; gap:var(--sp-2); flex-wrap:wrap; margin-bottom:var(--sp-2); }
+  .eg { font:12.5px var(--font-mono); text-align:left; display:grid; gap:2px; padding:6px 12px; border-radius:10px; border:1.5px solid var(--line); background:var(--panel); min-width:150px; max-width:240px; }
+  .eg b { font-size:14px; display:flex; gap:8px; align-items:center; justify-content:space-between; overflow:hidden; } .eg b span:first-child { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .eg .m { color:var(--ink2); font-weight:400; }
+  .eg.on { border-color:var(--ink); box-shadow:0 0 0 1px var(--ink); }
+  .eg .dot.needs_you { color:var(--brand); } .eg .dot.working { color:var(--i); animation:pulse 1.2s infinite; } .eg .dot.done { color:var(--g); }
+  .flow-x { overflow-x:auto; }
+  .flow-x svg { display:block; width:100%; min-width:760px; height:auto; font-family:var(--font-mono); }
+  .fl-base { stroke:var(--line); stroke-width:3; }
+  .fl-done { stroke:var(--ink); stroke-width:3; }
+  .fl-live { stroke:var(--i); stroke-width:3; stroke-dasharray:6 6; animation:dash .8s linear infinite; }
+  .fl-live.wait { stroke:var(--brand); }
+  @keyframes dash { to { stroke-dashoffset:-12; } }
+  .fl-rev { fill:none; stroke:var(--line); stroke-width:2; stroke-dasharray:4 5; }
+  .fl-rev.on { stroke:var(--ag-qa); }
+  .fl-lab { font-size:12px; fill:var(--ink2); }
+  .nd .ring { fill:var(--panel); stroke:var(--line); stroke-width:2; }
+  .nd .ico { color:var(--ink2); }
+  .nd .nm { font-size:12.5px; font-weight:700; fill:var(--ink2); text-transform:uppercase; }
+  .nd .sb { font-size:12px; fill:var(--ink2); }
+  .nd.done .ring { fill:var(--c); stroke:var(--c); } .nd.done .ico { color:#fff; } .nd.done .nm { fill:var(--c); }
+  .nd.run .ring { stroke:var(--c); stroke-width:3; } .nd.run .ico { color:var(--c); } .nd.run .nm { fill:var(--c); } .nd.run .sb { fill:var(--i-ink); font-weight:700; }
+  .nd.fail .ring { stroke:var(--r); stroke-width:3; } .nd.fail .sb { fill:var(--r-ink); font-weight:700; }
+  .nd.skip { opacity:.4; }
+  .nd .halo { fill:none; stroke:var(--c); stroke-width:2; transform-box:fill-box; transform-origin:center; animation:halo 1.6s ease-out infinite; }
+  @keyframes halo { from { transform:scale(1); opacity:.7; } to { transform:scale(1.6); opacity:0; } }
+  .cp .dm { fill:var(--panel); stroke:var(--ink2); stroke-width:1.5; }
+  .cp.done .dm { fill:var(--ink); stroke:var(--ink); }
+  .cp.wait .dm { fill:var(--brand); stroke:var(--brand); } .cp.wait .halo { stroke:var(--brand); }
+  .cp.fail .dm { fill:var(--r); stroke:var(--r); }
+  .cp .cl { font-size:12px; fill:var(--ink2); } .cp.wait .cl { fill:var(--brand-ink); font-weight:700; }
+  .stamp rect { fill:var(--panel); stroke-width:2; } .stamp text { font-size:13px; font-weight:700; letter-spacing:.08em; }
+  .stamp.pass rect { stroke:var(--g-ink); } .stamp.pass text { fill:var(--g-ink); }
+  .stamp.flag rect { stroke:var(--r-ink); } .stamp.flag text { fill:var(--r-ink); }
+  .boxes { display:grid; grid-template-columns:repeat(4, minmax(0,1fr)); gap:var(--sp-2); margin-top:var(--sp-2); }
+  .bx { border:1.5px solid var(--c); border-radius:10px; padding:8px 12px; font-family:var(--font-mono); text-decoration:none; color:var(--ink); display:block; }
+  .bx .l { font-size:12px; font-weight:700; color:var(--c); text-transform:uppercase; letter-spacing:.06em; display:flex; gap:6px; align-items:center; }
+  .bx .n { font-size:22px; font-weight:700; font-variant-numeric:tabular-nums; line-height:1.3; }
+  .bx .s { font-size:12px; color:var(--ink2); }
+  a.bx:hover { background:var(--zebra); }
+  /* current engagement, tail, result, log */
+  .pair { display:grid; grid-template-columns:minmax(0,1.1fr) minmax(0,1fr); gap:var(--sp-4); }
+  .cur-h { display:flex; justify-content:space-between; align-items:flex-start; gap:var(--sp-3); margin-bottom:var(--sp-3); }
+  .cur-h b { font:700 24px/1.2 var(--font-mono); display:block; overflow-wrap:anywhere; }
+  .cur-h .fig { font:700 24px var(--font-mono); font-variant-numeric:tabular-nums; white-space:nowrap; }
+  .fig.good { color:var(--g-ink); } .fig.bad { color:var(--r-ink); } .fig.wait { color:var(--brand-ink); }
+  dl.kv { display:grid; grid-template-columns:76px minmax(0,1fr); gap:3px 10px; margin:0 0 var(--sp-3); font:13px var(--font-mono); }
+  dl.kv dt { color:var(--ink2); } dl.kv dd { margin:0; font-weight:700; overflow-wrap:anywhere; }
+  .reason { font:12.5px/1.5 var(--font-mono); color:var(--ink); margin-bottom:var(--sp-3); overflow-wrap:anywhere; }
+  .reason span { color:var(--brand-ink); font-weight:700; }
+  .tail { background:var(--zebra); }
+  .tail .ph { color:var(--g-ink); text-transform:none; letter-spacing:0; font-size:13px; }
+  .tl { font:12.5px/1.45 var(--font-mono); padding:3px 0; }
+  .tl .t { color:var(--ink2); margin-right:8px; } .tl .k { font-weight:700; margin-right:8px; }
+  .tl .why { color:var(--ink2); padding-left:52px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .caret { display:inline-block; width:8px; height:15px; background:var(--g); vertical-align:-3px; animation:blinkc 1s steps(1) infinite; }
+  @keyframes blinkc { 50% { opacity:0; } }
+  .res-row { display:grid; grid-template-columns:64px minmax(0,1fr) auto; gap:var(--sp-3); align-items:center; font:13px var(--font-mono); padding:4px 0; }
+  .res-row .k { font-weight:700; color:var(--ink2); text-transform:uppercase; }
+  .res-row .v { font-weight:700; font-size:16px; text-align:right; font-variant-numeric:tabular-nums; }
+  .trk { height:10px; border-radius:5px; background:var(--tag); overflow:hidden; } .trk i { display:block; height:100%; background:var(--g); border-radius:5px; min-width:10px; }
+  .trk.start i { background:var(--ink2); }
+  .wl { font:700 13px var(--font-mono); padding-left:76px; } .wl .w { color:var(--g-ink); } .wl .x { color:var(--r-ink); }
+  .res-f { font:12px var(--font-mono); color:var(--ink2); text-align:right; }
+  .lg { max-height:460px; overflow:auto; }
+  .lr { display:grid; grid-template-columns:52px 104px minmax(0,1fr) auto; gap:4px var(--sp-3); padding:8px 0; border-top:1px solid var(--line); font-family:var(--font-mono); align-items:baseline; }
+  .lr:first-child { border-top:0; }
+  .lr .t { color:var(--ink2); font-size:13px; font-variant-numeric:tabular-nums; }
+  .lr .s { font-size:14.5px; font-weight:700; overflow-wrap:anywhere; }
+  .lr .s small { font-size:12.5px; font-weight:400; color:var(--ink2); }
+  .lr .why { grid-column:3 / 5; font-size:12.5px; color:var(--ink2); overflow-wrap:anywhere; }
+  .lr .mt { font-size:14px; font-weight:700; text-align:right; white-space:nowrap; }
+  .tg { font:700 12px var(--font-mono); text-transform:uppercase; text-align:center; border:1px solid currentColor; border-radius:var(--r-sm); padding:1px 6px; white-space:nowrap; }
+  .k-info { color:var(--i-ink); } .k-good { color:var(--g-ink); } .k-warn { color:var(--a-ink); } .k-bad { color:var(--r-ink); } .k-you { color:var(--brand-ink); } .k-mute { color:var(--ink2); }
+  .tg.k-info { background:var(--i-soft); } .tg.k-good { background:var(--g-soft); } .tg.k-warn { background:var(--a-soft); } .tg.k-bad { background:var(--r-soft); } .tg.k-you { background:var(--brand-soft); } .tg.k-mute { background:var(--zebra); }
+  .strike s { color:var(--ink2); }
+  .term .empty { color:var(--ink2); font-family:var(--font-mono); font-style:normal; }
+  .term button:focus-visible, .term a:focus-visible, nav.bar a:focus-visible { outline:2px solid var(--focus); outline-offset:2px; }
+  @media (max-width: 1100px) { .tgrid { grid-template-columns:260px minmax(0,1fr); } .pair { grid-template-columns:1fr; } }
+  @media (max-width: 960px) {
+    .hero { grid-template-columns:72px minmax(0,1fr); } .mark { width:72px; height:72px; }
+    .hstats { grid-column:1 / -1; text-align:left; grid-template-columns:repeat(4, auto); justify-content:start; }
+    .tgrid { grid-template-columns:1fr; } .tcol.agents { order:2; } .tcol.agents { grid-template-columns:repeat(2, minmax(0,1fr)); } .tcol.agents .ph { grid-column:1 / -1; }
+  }
+  @media (max-width: 640px) {
+    .term { padding:var(--sp-3); border-radius:14px; } .hero h1 { font-size:22px; } .hstats { grid-template-columns:repeat(2, auto); } .hstats .n.big { font-size:32px; }
+    .tcol.agents { grid-template-columns:1fr; } .boxes { grid-template-columns:repeat(2, minmax(0,1fr)); }
+    .tb-t { text-align:left; } .lights { display:none; }
+    .lr { grid-template-columns:48px minmax(0,1fr) auto; } .lr .tg { grid-column:2; justify-self:start; grid-row:1; } .lr .s { grid-column:1 / -1; } .lr .why { grid-column:1 / -1; } .lr .mt { grid-row:1; grid-column:3; }
+    .tl .why { padding-left:0; white-space:normal; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    main, .mark .eye, .caret, .fl-live, .nd .halo, .dot, .step.run .rk { animation:none !important; }
+    .nd .halo { display:none; }
+  }
   @media (max-width: 960px) { .two { grid-template-columns:1fr; } .lanes { grid-template-columns:1fr; } .kpis { grid-template-columns:repeat(2,minmax(0,1fr)); } }
-  @media (max-width: 640px) { .wrap { padding:0 16px; } .form { grid-template-columns:1fr; } header.top h1 { font-size:24px; } }
+  @media (max-width: 640px) { .wrap { padding:0 16px; } .form { grid-template-columns:1fr; } }
 </style>
 </head>
 <body>
-<header class="top"><div class="wrap">
-  <div class="ey">Food &amp; Beverage · Brand Studio</div>
-  <h1>F&amp;B Agency Dashboard</h1>
-  <div class="sub">Six specialist agents take a client brief to research, strategy, messaging, visual identity and a client-ready report. You approve the work at each checkpoint before it moves on.</div>
-  <div class="note" id="foot"></div>
-</div></header>
+<div class="titlebar"><div class="wrap tb-in">
+  <span class="lights" aria-hidden="true"><i></i><i></i><i></i></span>
+  <span class="tb-t">F&amp;B Agency Terminal — six specialists · log first</span>
+  <span class="tb-mode" id="foot"></span>
+</div></div>
 <nav class="bar"><div class="inner">
   <a href="#/" data-nav="overview">Overview <span class="count" id="nav-needs" hidden></span></a>
   <a href="#/new" data-nav="new">New engagement</a>
@@ -213,7 +358,7 @@ const CP_LABEL = {research:'Research review', strategy:'Strategy review', creati
 const REVIEW_TABS = {research:['research'], strategy:['strategy'], creative:['identity_directions','messaging'], final:['report','qa','messaging','identity']};
 
 function route() {
-  editing = false; clearInterval(timer);
+  editing = false; clearInterval(timer); clearInterval(clockTimer);
   const [, page, arg] = location.hash.replace(/^#/, '').split('/');
   document.querySelectorAll('[data-nav]').forEach(a => a.classList.toggle('on', a.dataset.nav === (page || 'overview') || (page === 'run' && a.dataset.nav === 'overview') || (page === 'client' && a.dataset.nav === 'memory')));
   const views = {'':overview, new:newRun, run:() => runView(arg), memory, client:() => clientView(decodeURIComponent(arg)), how};
@@ -226,14 +371,185 @@ document.addEventListener('input', e => { if (e.target.closest('[data-editable]'
 async function refreshNav() {
   try {
     const [board, clients] = await Promise.all([api('/runs'), api('/clients')]);
-    const n = board.needs_you.length, f = clients.reduce((a, c) => a + c.pending_facts, 0);
-    $('#nav-needs').hidden = !n; $('#nav-needs').textContent = n;
-    $('#nav-facts').hidden = !f; $('#nav-facts').textContent = f;
+    setNav(board, clients);
     return {board, clients};
   } catch { return null; }
 }
 
-// ------------------------------------------------------------------ overview
+// ------------------------------------------------------------------ overview: the agent terminal
+const ICON = {
+  research:'<circle cx="11" cy="11" r="6"/><path d="M15.5 15.5 20 20"/>',
+  strategist:'<circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="3"/>',
+  messaging:'<path d="M4 5h16v11H10l-6 4z"/>',
+  identity:'<path d="M12 3l8 9-8 9-8-9z"/>',
+  report:'<path d="M6 3h9l4 4v14H6z"/><path d="M14 3v5h5M9 13h7M9 17h5"/>',
+  qa:'<path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/><path d="M8.5 12l2.5 2.5 4.5-5"/>',
+  memory:'<ellipse cx="12" cy="6" rx="7" ry="3"/><path d="M5 6v12c0 1.7 3.1 3 7 3s7-1.3 7-3V6M5 12c0 1.7 3.1 3 7 3s7-1.3 7-3"/>',
+  you:'<circle cx="12" cy="8" r="4"/><path d="M4 21c1-4.5 4.5-6.5 8-6.5s7 2 8 6.5"/>',
+  log:'<path d="M5 4h14v16H5z"/><path d="M8 9h8M8 13h8M8 17h5"/>',
+};
+const svgIcon = (k, size = 18, attrs = '') => `<svg ${attrs} viewBox="0 0 24 24" width="${size}" height="${size}" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICON[k]}</svg>`;
+// The specialists, in pipeline order. Rules are what the code and prompts actually enforce.
+const AG = [
+  {id:'research', keys:['research_analyst'], name:'Research', role:'market, audience, competitors, client questions', rule:'asks before it assumes'},
+  {id:'strategist', keys:['brand_strategist'], name:'Strategist', role:'positioning, promise and pillars', rule:'every pillar traces to evidence'},
+  {id:'messaging', keys:['messaging_lead'], name:'Messaging', role:'taglines, tone of voice, sample copy', rule:'proof from what the business really does'},
+  {id:'identity', keys:['identity_direction', 'identity_refiner'], name:'Identity', role:'three directions, tokens and type', rule:'contrast-checked in light and dark'},
+  {id:'report', keys:['report_producer'], name:'Report', role:'assembles the client-ready report', rule:'no new claims, no placeholders'},
+  {id:'qa', keys:['qa_reviewer'], name:'QA gate', role:'automated checks, then a reviewer', rule:'nothing passes with a blocker'},
+  {id:'memory', keys:['fact_extractor'], name:'Memory', role:'saves durable brand facts', rule:'keeps only what you approved'},
+];
+const agentOf = key => AG.find(a => a.keys.includes(key));
+const DELIVERABLES = ['research', 'strategy', 'messaging', 'identity', 'report', 'qa'];
+const hm = iso => new Date(iso).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit', hour12:false});
+const hms = d => d.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit', second:'2-digit', hour12:false});
+let clockTimer = null;
+
+// One log line per meaningful event: a tag, who it concerns, and the reason behind it.
+function logLine(e) {
+  const d = e.detail || {}, who = e.client_name, ag = agentOf(d.agent), an = ag ? ag.name : (AGENTS[d.agent] || d.agent);
+  const secs = ms => (ms / 1000).toFixed(1) + 's';
+  switch (e.kind) {
+    case 'run.created': return {tag:'brief', k:'info', who, why:'new brief in, research starts', mt:'new'};
+    case 'agent.started': return {tag:'start', k:'mute', who, sub:an, why:`${e.stage} stage`, mt:''};
+    case 'agent.completed': return {tag:'done', k:'good', who, sub:an, why:`finished in ${secs(d.latency_ms)}, ${(d.input_tokens + d.output_tokens).toLocaleString()} tokens`, mt:secs(d.latency_ms)};
+    case 'checkpoint.opened': return {tag:'ask', k:'you', who, sub:CP_LABEL[d.checkpoint], why:'ready for your review', mt:'you'};
+    case 'checkpoint.decided': {
+      const kept = d.direction != null ? `kept direction ${d.direction + 1}` : '';
+      const why = d.feedback || [kept, d.answers?.length ? `${d.answers.length} client answer${d.answers.length > 1 ? 's' : ''}` : ''].filter(Boolean).join(', ') || 'no note';
+      const map = {approve:['approve', 'good'], request_changes:['changes', 'warn'], reject:['reject', 'bad']}[d.decision] || [d.decision, 'mute'];
+      return {tag:map[0], k:map[1], who, sub:CP_LABEL[d.checkpoint], why, mt:e.actor};
+    }
+    case 'qa.reviewed': return {tag:d.passed ? 'pass' : 'flag', k:d.passed ? 'good' : 'warn', who, sub:`QA attempt ${d.attempt}`, why:d.summary || (d.passed ? 'no blocker or major issue' : 'blocker or major issue found'), mt:`${d.score}/10`};
+    case 'qa.routed_revision': return {tag:'revise', k:'warn', who, sub:an, why:(d.issues || [])[0] || 'QA issues sent back', mt:`${(d.issues || []).length} issue${(d.issues || []).length === 1 ? '' : 's'}`};
+    case 'qa.escalated': return {tag:'escalate', k:'bad', who, sub:'QA gate', why:`still failing after ${d.attempts} attempts, you decide at sign-off`, mt:'you'};
+    case 'facts.saved': return {tag:'save', k:'info', who, sub:'Memory', why:`${d.active} active, ${d.pending} to confirm, ${d.dropped} dropped`, mt:`+${d.active} facts`};
+    case 'stage.failed': return {tag:'fail', k:'bad', who, sub:`${e.stage} stage`, why:d.error, mt:'retry'};
+    case 'run.completed': return {tag:'ship', k:'good', who, why:'signed off, deliverables ready', mt:'done'};
+  }
+  return null;
+}
+
+// Per-step state for one run: shared by the terminal flow and the engagement pipeline.
+function stepStates(run, events, openCp) {
+  const started = {}, done = {}, decided = {};
+  for (const e of events) {
+    const a = agentOf(e.detail?.agent)?.id;
+    if (e.kind === 'agent.started' && a) started[a] = (started[a] || 0) + 1;
+    if (e.kind === 'agent.completed' && a) done[a] = (done[a] || 0) + 1;
+    if (e.kind === 'checkpoint.decided') decided[e.detail.checkpoint] = e.detail.decision;
+  }
+  const cps = new Set(SETTINGS?.checkpoints || ['research','strategy','creative','final']);
+  const order = [['a','research'],['c','research'],['a','strategist'],['c','strategy'],['a','messaging'],['a','identity'],['c','creative'],['a','report'],['a','qa'],['c','final'],['a','memory']];
+  return order.filter(([k, key]) => k === 'a' || cps.has(key)).map(([kind, key]) => {
+    if (kind === 'c') {
+      const d = decided[key];
+      if (openCp === key) return {kind, key, state:'wait', text:'Waiting for you'};
+      if (d === 'approve') return {kind, key, state:'done', text:'Approved'};
+      if (d === 'reject') return {kind, key, state:'fail', text:'Rejected'};
+      return {kind, key, state:'', text:d === 'request_changes' ? 'Changes requested' : 'Not reached'};
+    }
+    const st = started[key] || 0, dn = done[key] || 0;
+    let state = '', text = 'Queued';
+    if (st > dn && run?.status === 'running') { state = 'run'; text = 'Working'; }
+    else if (st > dn && run?.status === 'failed') { state = 'fail'; text = 'Failed'; }
+    else if (dn) { state = 'done'; text = dn > 1 ? `Done, ${dn} passes` : 'Done'; }
+    if (run?.status === 'rejected' && !dn) state = 'skip';
+    return {kind, key, state, text, passes:dn};
+  });
+}
+
+function agentStates(runs, act) {
+  const st = {}, byId = Object.fromEntries(runs.map(v => [v.run.id, v.run])), open = {};
+  for (const e of act) {
+    const d = e.detail || {};
+    let a = null;
+    if (e.kind.startsWith('agent.') || e.kind === 'qa.routed_revision') a = agentOf(d.agent);
+    else if (e.kind === 'qa.reviewed' || e.kind === 'qa.escalated') a = AG[5];
+    else if (e.kind === 'facts.saved') a = AG[6];
+    if (!a) continue;
+    st[a.id] = {...st[a.id], last:e};
+    if (e.kind === 'agent.started' || e.kind === 'agent.completed') {
+      const k = e.run_id + '|' + a.id; open[k] = (open[k] || 0) + (e.kind === 'agent.started' ? 1 : -1);
+    }
+  }
+  for (const [k, n] of Object.entries(open)) {
+    if (n <= 0) continue;
+    const [rid, aid] = k.split('|'), r = byId[rid];
+    if (r?.status === 'running') st[aid].working = r; else if (r?.status === 'failed') st[aid].failed = r;
+  }
+  return st;
+}
+
+function agentCard(a, s = {}) {
+  let badge = ['idle', ''], last = 'waiting for a brief';
+  const e = s.last, d = e?.detail || {};
+  if (e) {
+    if (e.kind === 'agent.completed') { badge = ['done', 'done']; last = `done ${e.client_name}, ${(d.latency_ms / 1000).toFixed(1)}s`; }
+    if (e.kind === 'agent.started') { badge = ['queued', '']; last = `started ${e.client_name}`; }
+    if (e.kind === 'qa.reviewed') { badge = d.passed ? ['pass', 'pass'] : ['flag', 'flag']; last = `${d.passed ? 'passed' : 'flagged'} ${e.client_name}, ${d.score}/10`; }
+    if (e.kind === 'qa.escalated') { badge = ['flag', 'flag']; last = `escalated ${e.client_name} to you`; }
+    if (e.kind === 'qa.routed_revision') { badge = ['revise', 'flag']; last = `revising ${e.client_name}, ${(d.issues || []).length} QA issues`; }
+    if (e.kind === 'facts.saved') { badge = ['saved', 'done']; last = `${e.client_name}: +${d.active} facts, ${d.pending} to confirm`; }
+  }
+  if (s.failed) { badge = ['failed', 'failed']; last = `failed on ${s.failed.brief.client_name}`; }
+  if (s.working) { badge = ['working', 'working']; last = `working on ${s.working.brief.client_name}`; }
+  return `<div class="ag ${s.working ? 'on' : ''}" style="--c:var(--ag-${a.id})">
+    <div class="ag-top"><div class="ic">${svgIcon(a.id)}</div><div><div class="an">${esc(a.name)}</div><div class="ar">${esc(a.role)}</div></div><span class="bd ${badge[1]}">${badge[0]}</span></div>
+    <div class="rule">${esc(a.rule)}</div><div class="last">${esc(last)}</div></div>`;
+}
+function youCard(board, act, anyWorking) {
+  const waiting = board.needs_you.filter(v => v.open_checkpoint);
+  const decided = act.filter(e => e.kind === 'checkpoint.decided').at(-1);
+  let last = 'nothing to review yet';
+  if (waiting.length) last = `${waiting.length} waiting: ${waiting[0].run.brief.client_name}, ${CP_LABEL[waiting[0].open_checkpoint].toLowerCase()}`;
+  else if (decided) last = `${String(decided.detail.decision).replace('_', ' ')} ${decided.detail.checkpoint} for ${decided.client_name}`;
+  const on = waiting.length && !anyWorking;
+  return `<${waiting.length ? `a href="#/run/${waiting[0].run.id}"` : 'div'} class="ag ${on ? 'on' : ''}" style="--c:var(--ag-you);text-decoration:none;color:inherit">
+    <div class="ag-top"><div class="ic">${svgIcon('you')}</div><div><div class="an">You</div><div class="ar">review at each checkpoint</div></div><span class="bd ${waiting.length ? 'you' : ''}">${waiting.length ? 'your turn' : 'reading'}</span></div>
+    <div class="rule">nothing ships without your sign-off</div><div class="last">${esc(last)}</div></${waiting.length ? 'a' : 'div'}>`;
+}
+
+function flowSvg(steps, run) {
+  const W = 960, Y = 100, x0 = 64, dx = (W - 2 * x0) / (steps.length - 1), xs = steps.map((_, i) => x0 + i * dx);
+  const reached = steps.reduce((m, s, i) => (s.state && s.state !== 'skip' ? i : m), -1);
+  const live = steps.findIndex(s => s.state === 'run' || s.state === 'wait');
+  const qi = steps.findIndex(s => s.key === 'qa' && s.kind === 'a'), mi = steps.findIndex(s => s.key === 'messaging' && s.kind === 'a');
+  const qa = run?.outputs?.qa, revisions = qa ? Math.max(0, qa.attempts - 1) : 0;
+  let g = `<line class="fl-base" x1="${x0}" y1="${Y}" x2="${W - x0}" y2="${Y}"/>`;
+  if (reached > 0) g += `<line class="fl-done" x1="${x0}" y1="${Y}" x2="${xs[live > 0 ? live - 1 : reached]}" y2="${Y}"/>`;
+  if (live > 0) g += `<line class="fl-live ${steps[live].state}" x1="${xs[live - 1]}" y1="${Y}" x2="${xs[live]}" y2="${Y}"/>`;
+  const top = Y - 78;
+  g += `<path class="fl-rev ${revisions ? 'on' : ''}" d="M${xs[qi]} ${Y - 30} C ${xs[qi]} ${top}, ${xs[mi]} ${top}, ${xs[mi]} ${Y - 30}"/>
+    <text class="fl-lab" x="${(xs[qi] + xs[mi]) / 2}" y="${top + 14}" text-anchor="middle">${revisions ? `QA sent work back ${revisions}×` : 'QA can send work back'}</text>`;
+  steps.forEach((s, i) => {
+    const x = xs[i];
+    if (s.kind === 'c') {
+      g += `<g class="cp ${s.state}" transform="translate(${x},${Y})"><title>${esc(CP_LABEL[s.key])}: ${esc(s.text)}</title>
+        ${s.state === 'wait' ? '<rect class="halo nd" x="-9" y="-9" width="18" height="18" transform="rotate(45)" fill="none"/>' : ''}
+        <rect class="dm" x="-9" y="-9" width="18" height="18" rx="3" transform="rotate(45)"/>
+        <text class="cl" y="34" text-anchor="middle">you</text></g>`;
+      return;
+    }
+    const a = AG.find(x => x.id === s.key);
+    g += `<g class="nd ${s.state}" style="--c:var(--ag-${a.id})" transform="translate(${x},${Y})"><title>${esc(a.name)}: ${esc(s.text)}</title>
+      ${s.state === 'run' ? '<circle class="halo" r="26"/>' : ''}<circle class="ring" r="26"/>
+      <g class="ico">${svgIcon(a.id, 24, 'x="-12" y="-12"')}</g>
+      <text class="nm" y="50" text-anchor="middle">${esc(a.name)}</text><text class="sb" y="66" text-anchor="middle">${esc(s.text.toLowerCase())}</text></g>`;
+  });
+  if (qa) {
+    const pass = qa.gate_passed, label = pass ? `PASSED ${qa.score}/10` : 'FLAGGED', w = label.length * 9 + 20;
+    g += `<g class="stamp ${pass ? 'pass' : 'flag'}" transform="translate(${xs[qi] + 6},${Y - 70}) rotate(-7)"><rect x="0" y="0" width="${w}" height="26" rx="4"/><text x="${w / 2}" y="18" text-anchor="middle">${label}</text></g>`;
+  }
+  return `<svg viewBox="0 0 ${W} 176" role="img" aria-label="Pipeline for the selected engagement">${g}</svg>`;
+}
+
+function setNav(board, clients) {
+  const n = board.needs_you.length, f = clients.reduce((a, c) => a + c.pending_facts, 0);
+  $('#nav-needs').hidden = !n; $('#nav-needs').textContent = n;
+  $('#nav-facts').hidden = !f; $('#nav-facts').textContent = f;
+}
+
 function runStatus(v) {
   const r = v.run;
   if (v.open_checkpoint) return `<span class="pill accent"><span class="dot"></span>${esc(CP_LABEL[v.open_checkpoint])}</span>`;
@@ -242,35 +558,109 @@ function runStatus(v) {
   if (r.status === 'completed') return '<span class="pill ok">Completed</span>';
   return `<span class="pill">${esc(r.status)}</span>`;
 }
-function runCard(v) {
-  const r = v.run, qa = r.outputs.qa;
-  const qaPill = qa ? (qa.gate_passed ? `<span class="pill ok">QA ${qa.score}/10</span>` : '<span class="pill warn">QA flagged</span>') : '';
-  return `<a class="runcard" href="#/run/${r.id}"><b>${esc(r.brief.client_name)}</b>
-    <div class="meta">${esc(r.brief.business_type)} · ${esc(r.brief.location)} · ${ago(r.updated_at)}</div>
-    <div class="row">${runStatus(v)}${qaPill}</div></a>`;
+function egMeta(v) {
+  const r = v.run;
+  if (v.open_checkpoint) return CP_LABEL[v.open_checkpoint].toLowerCase();
+  if (r.status === 'running') return `working: ${r.stage}`;
+  if (r.status === 'completed') return r.outputs.qa ? `signed off, QA ${r.outputs.qa.score}/10` : 'signed off';
+  return r.status;
 }
+
 async function overview() {
   const view = $('#view');
-  const draw = async () => {
-    const data = await refreshNav(); if (!data) { view.innerHTML = '<p>Cannot reach the API.</p>'; return; }
-    const {board, clients} = data, pendingFacts = clients.reduce((a, c) => a + c.pending_facts, 0);
-    const lane = (key, title, empty) => `<div class="lane"><h3><span>${title}</span><span>${board[key].length}</span></h3>
-      ${board[key].map(runCard).join('') || `<div class="empty">${empty}</div>`}</div>`;
-    view.innerHTML = `<div class="head"><div><div class="dnum">01 · Overview</div><h2>Engagements</h2><p class="sub2">Every engagement, with what needs you first.</p></div>
-        <a class="btn primary" href="#/new">New engagement</a></div>
-      <div class="grid kpis">
-        <div class="card kpi ${board.needs_you.length ? 'hot' : ''}"><div class="n">${board.needs_you.length}</div><div class="l">Need your review</div></div>
-        <div class="card kpi"><div class="n">${board.working.length}</div><div class="l">Agents working</div></div>
-        <div class="card kpi"><div class="n">${board.done.filter(v => v.run.status === 'completed').length}</div><div class="l">Completed</div></div>
-        <a class="card kpi ${pendingFacts ? 'hot' : ''}" href="#/memory" style="text-decoration:none;color:inherit"><div class="n">${pendingFacts}</div><div class="l">Brand facts to confirm</div></a>
+  let focus = null, lastSig = '';
+  view.innerHTML = '<div class="term loading">$ connecting to the agency<span class="caret"></span></div>';
+  const draw = async force => {
+    let board, clients, act;
+    try { [board, clients, act] = await Promise.all([api('/runs'), api('/clients'), api('/activity?limit=400')]); }
+    catch { view.innerHTML = '<div class="term"><div class="empty">Cannot reach the API. Is the server running?</div></div>'; return; }
+    setNav(board, clients);
+    const runs = [...board.needs_you, ...board.working, ...board.done];
+    const fv = runs.find(v => v.run.id === focus) || runs[0];
+    const sig = JSON.stringify([act.length, act.at(-1)?.at, runs.map(v => v.run.updated_at), clients, fv?.run.id]);
+    if (!force && sig === lastSig) return; lastSig = sig;
+    const events = fv ? await api(`/runs/${fv.run.id}/events`).catch(() => []) : [];
+    const r = fv?.run, lines = act.map(e => ({e, l:logLine(e)})).filter(x => x.l && x.l.tag !== 'start');
+    const st = agentStates(runs, act), anyWorking = Object.values(st).some(s => s.working);
+    const completed = board.done.filter(v => v.run.status === 'completed').length;
+    const scores = runs.map(v => v.run.outputs.qa?.score).filter(n => n != null);
+    const qaAvg = scores.length ? (scores.reduce((a, b) => a + b, 0) / scores.length).toFixed(1) : '–';
+    const reviews = act.filter(e => e.kind === 'qa.reviewed'), passed = reviews.filter(e => e.detail.passed).length;
+    const revisions = act.filter(e => e.kind === 'qa.routed_revision').length;
+    const facts = clients.reduce((a, c) => a + c.active_facts, 0), pending = clients.reduce((a, c) => a + c.pending_facts, 0);
+    const mode = board.working.length ? ['working', 'working'] : board.needs_you.length ? ['waiting', 'waiting on you'] : ['idle', 'idle'];
+    const lastL = lines.at(-1);
+
+    const runLines = lines.filter(x => x.e.run_id === r?.id);
+    const reasonL = runLines.filter(x => x.l.tag !== 'done').at(-1) || runLines.at(-1);
+    const have = r ? DELIVERABLES.filter(k => r.outputs[k]).length : 0;
+    const decisions = events.filter(e => e.kind === 'checkpoint.decided');
+    const ok = decisions.filter(e => e.detail.decision === 'approve').length, back = decisions.length - ok;
+    const passes = events.filter(e => e.kind === 'agent.completed');
+    const secs = passes.reduce((a, e) => a + (e.detail.latency_ms || 0), 0) / 1000;
+    const qa = r?.outputs.qa;
+    const fig = !r ? '' : qa ? `<span class="fig ${qa.gate_passed ? 'good' : 'bad'}">QA ${qa.score}/10</span>` : fv.open_checkpoint ? '<span class="fig wait">your turn</span>' : `<span class="fig">${have}/6</span>`;
+
+    const logEl = $('#lg'), atBottom = !logEl || logEl.scrollHeight - logEl.scrollTop - logEl.clientHeight < 12, keep = logEl?.scrollTop;
+    view.innerHTML = `<div class="term">
+      <div class="hero">
+        <svg class="mark" viewBox="0 0 96 96" aria-hidden="true"><defs><radialGradient id="mk" cx=".38" cy=".32" r=".75"><stop offset="0" stop-color="#ffffff"/><stop offset="1" stop-color="#e4dfd4"/></radialGradient></defs>
+          <circle cx="48" cy="48" r="45" fill="url(#mk)" stroke="var(--line)" stroke-width="2"/><rect class="eye" x="33" y="33" width="10" height="28" rx="5" fill="var(--navy)"/><rect class="eye" x="53" y="33" width="10" height="28" rx="5" fill="var(--navy)"/></svg>
+        <div><h1><span><span class="b">F&amp;B Agency</span> Terminal</span><span class="ver">v1.0</span></h1>
+          <div class="tstat ${mode[0]}"><span class="dot"></span>${mode[1]} · <time id="tclock">${hms(new Date())}</time></div>
+          ${lastL ? `<div class="lastev">${esc(lastL.l.tag)} · logged ${esc(lastL.l.who)}</div>` : '<div class="lastev">no activity yet</div>'}
+          <div class="motto">every decision gets a reason</div></div>
+        <div class="hstats">
+          <div class="good"><div class="n big">${completed}</div><div class="l">brands signed off</div></div>
+          <div><div class="n">${runs.length}</div><div class="l">engagements</div></div>
+          <div class="${board.needs_you.length ? 'hot' : ''}"><div class="n">${board.needs_you.length}</div><div class="l">need you</div></div>
+          <div><div class="n">${qaAvg}</div><div class="l">avg QA score</div></div>
+        </div>
       </div>
-      <div class="grid lanes">
-        ${lane('needs_you', 'Needs you', 'Nothing waiting on you.')}
-        ${lane('working', 'Working', 'No agents running.')}
-        ${lane('done', 'Done', 'No finished engagements yet.')}
-      </div>`;
+      <div class="tgrid">
+        <div class="tcol agents"><div class="ph"><span>Agents</span><span class="r">${AG.length} online</span></div>
+          ${AG.map(a => agentCard(a, st[a.id])).join('')}${youCard(board, act, anyWorking)}</div>
+        <div class="tcol">
+          <section class="tp"><div class="ph"><span>Live flow · research → strategy → creative → report → QA → memory</span><span class="r">${reviews.length} QA reviews</span></div>
+            ${runs.length ? `<div class="egs">${runs.slice(0, 6).map(v => `<button type="button" class="eg ${v === fv ? 'on' : ''}" data-focus="${v.run.id}" aria-pressed="${v === fv}">
+              <b><span>${esc(v.run.brief.client_name)}</span><span class="dot ${v.zone}"></span></b><span class="m">${esc(egMeta(v))}</span></button>`).join('')}</div>` : ''}
+            <div class="flow-x">${flowSvg(stepStates(r, events, fv?.open_checkpoint), r)}</div>
+            <div class="boxes">
+              <div class="bx" style="--c:var(--ag-qa)"><div class="l">${svgIcon('qa', 14)}QA gate</div><div class="n">${passed}/${reviews.length}</div><div class="s">passed, ${revisions} sent back</div></div>
+              <a class="bx" style="--c:var(--brand)" href="${board.needs_you[0] ? '#/run/' + board.needs_you[0].run.id : '#/'}"><div class="l">${svgIcon('you', 14)}You</div><div class="n">${board.needs_you.length}</div><div class="s">${board.needs_you.length === 1 ? 'engagement waits' : 'engagements wait'}</div></a>
+              <div class="bx" style="--c:var(--ink)"><div class="l">${svgIcon('log', 14)}Log</div><div class="n">line #${lines.length}</div><div class="s">each with a reason</div></div>
+              <a class="bx" style="--c:var(--ag-memory)" href="#/memory"><div class="l">${svgIcon('memory', 14)}Memory</div><div class="n">${facts} facts</div><div class="s">${pending} to confirm</div></a>
+            </div></section>
+          <div class="pair">
+            <section class="tp"><div class="ph"><span>Engagement · brief vs now</span>${fv ? runStatus(fv) : ''}</div>
+              ${r ? `<div class="cur-h"><b>${esc(r.brief.client_name)}</b>${fig}</div>
+                <dl class="kv"><dt>brief</dt><dd>${esc(r.brief.business_type)}, ${esc(r.brief.location)}</dd>
+                  <dt>stage</dt><dd>${esc(r.stage)}</dd><dt>agents</dt><dd>${passes.length} passes, ${secs.toFixed(1)}s</dd>
+                  <dt>tokens</dt><dd>${r.usage.input_tokens.toLocaleString()} in, ${r.usage.output_tokens.toLocaleString()} out</dd>
+                  <dt>started</dt><dd>${ago(r.created_at)}</dd></dl>
+                ${reasonL ? `<div class="reason"><span>reason:</span> ${esc(reasonL.l.why)}</div>` : ''}
+                <a class="btn primary" href="#/run/${r.id}">${fv.open_checkpoint ? 'Review now' : 'Open engagement'}</a>`
+              : `<p class="empty">No engagement yet.</p><a class="btn primary" href="#/new">Start from a client brief</a>`}</section>
+            <section class="tp tail"><div class="ph"><span>$ tail -f agency.log</span><span class="r">${lines.length} lines</span></div>
+              ${lines.slice(-6).map(({e, l}) => `<div class="tl"><span class="t">${hm(e.at)}</span><span class="k k-${l.k}">${esc(l.tag.toUpperCase())}</span>${esc(l.who)}${l.sub ? ` · ${esc(l.sub)}` : ''}<div class="why">${esc(l.why)}</div></div>`).join('') || '<div class="tl">waiting for the first brief</div>'}
+              <div class="tl"><span class="caret"></span></div></section>
+          </div>
+          ${r ? `<section class="tp"><div class="ph"><span>Result · start vs now</span><span class="r">${esc(r.brief.client_name)}, ${hm(r.created_at)} → ${hm(r.updated_at)}</span></div>
+            <div class="res-row"><span class="k">start</span><div class="trk start"><i style="width:0"></i></div><span class="v">brief, ${r.brief.goals.length} goal${r.brief.goals.length === 1 ? '' : 's'}</span></div>
+            <div class="res-row"><span class="k">now</span><div class="trk"><i style="width:${Math.round(have / 6 * 100)}%"></i></div><span class="v">${have}/6 deliverables</span></div>
+            <div class="wl"><span class="w">${ok} approved</span> / <span class="x">${back} sent back</span></div>
+            <div class="res-f">${r.outputs.facts ? `${r.outputs.facts.active} facts saved for the next engagement` : r.status === 'completed' ? 'signed off' : 'updates live'}</div></section>` : ''}
+          <section class="tp"><div class="ph"><span>Log</span><span class="r strike"><s>should I check on it?</s> → reading the log</span></div>
+            <div class="lg" id="lg">${lines.map(({e, l}) => `<div class="lr"><span class="t">${hm(e.at)}</span><span class="tg k-${l.k}">${esc(l.tag)}</span>
+              <span class="s">${esc(l.who)}${l.sub ? ` <small>${esc(l.sub)}</small>` : ''}</span><span class="mt k-${l.k}">${esc(l.mt)}</span>
+              <span class="why">reason: ${esc(l.why)}</span></div>`).join('') || '<div class="empty">The log starts with the first brief.</div>'}</div></section>
+        </div>
+      </div></div>`;
+    const lg = $('#lg'); if (lg) lg.scrollTop = atBottom ? lg.scrollHeight : keep;
+    view.querySelectorAll('[data-focus]').forEach(b => b.onclick = () => { focus = b.dataset.focus; draw(true); });
   };
-  await draw(); poll(draw);
+  await draw(true); poll(() => draw(false), 2500);
+  clockTimer = setInterval(() => { const t = $('#tclock'); if (t) t.textContent = hms(new Date()); }, 1000);
 }
 
 // ------------------------------------------------------------------ new engagement
@@ -322,35 +712,11 @@ function newRun() {
 
 // ------------------------------------------------------------------ run view
 function pipeline(run, events, openCp) {
-  const started = {}, done = {}, decided = {};
-  for (const e of events) {
-    if (e.kind === 'agent.started') started[e.detail.agent] = (started[e.detail.agent] || 0) + 1;
-    if (e.kind === 'agent.completed') done[e.detail.agent] = (done[e.detail.agent] || 0) + 1;
-    if (e.kind === 'checkpoint.decided') decided[e.detail.checkpoint] = e.detail.decision;
-  }
-  const cps = new Set(SETTINGS?.checkpoints || ['research','strategy','creative','final']);
-  const steps = [['a','research_analyst'],['c','research'],['a','brand_strategist'],['c','strategy'],['a','messaging_lead'],['a','identity_direction'],
-    ['c','creative'],['a','report_producer'],['a','qa_reviewer'],['c','final'],['a','fact_extractor']];
   let n = 0;
-  return '<div class="pipe">' + steps.map(([kind, key]) => {
-    if (kind === 'c') {
-      if (!cps.has(key)) return '';
-      const d = decided[key];
-      let cls = '', s = 'Not reached';
-      if (openCp === key) { cls = 'wait'; s = 'Waiting for you'; }
-      else if (d === 'approve') { cls = 'done'; s = 'Approved'; }
-      else if (d === 'reject') { cls = 'fail'; s = 'Rejected'; }
-      else if (d === 'request_changes') { s = 'Changes requested'; }
-      return `<div class="step cp ${cls}"><div class="rk">✋</div><div><div class="t">${esc(CP_LABEL[key])}</div><div class="s">${s}</div></div></div>`;
-    }
-    const st = started[key] || 0, dn = done[key] || 0;
-    let cls = '', s = 'Queued';
-    if (st > dn && run.status === 'running') { cls = 'run'; s = 'Working'; }
-    else if (st > dn && run.status === 'failed') { cls = 'fail'; s = 'Failed'; }
-    else if (dn) { cls = 'done'; s = dn > 1 ? `Done · ${dn} passes` : 'Done'; }
-    if (run.status === 'rejected' && !dn) cls = 'skip';
-    return `<div class="step ${cls}"><div class="rk">${++n}</div><div><div class="t">${esc(AGENTS[key])}</div><div class="s">${s}</div></div></div>`;
-  }).join('') + '</div>';
+  return '<div class="pipe">' + stepStates(run, events, openCp).map(st => st.kind === 'c'
+    ? `<div class="step cp ${st.state}"><div class="rk">${svgIcon('you', 14)}</div><div><div class="t">${esc(CP_LABEL[st.key])}</div><div class="s">${st.text}</div></div></div>`
+    : `<div class="step ${st.state}"><div class="rk">${++n}</div><div><div class="t">${esc(AGENTS[AG.find(a => a.id === st.key).keys[0]])}</div><div class="s">${st.text}</div></div></div>`
+  ).join('') + '</div>';
 }
 
 const R = {
@@ -604,7 +970,7 @@ function how() {
 // ------------------------------------------------------------------ boot
 (async () => {
   try { SETTINGS = await api('/settings'); } catch {}
-  if (SETTINGS) $('#foot').innerHTML = `${SETTINGS.demo ? '<span class="pill warn">Demo mode</span><br>' : ''}Storage: ${esc(SETTINGS.storage)}`;
+  if (SETTINGS) $('#foot').textContent = `${SETTINGS.demo ? 'demo' : 'live'} · ${SETTINGS.storage}`;
   route();
 })();
 </script>

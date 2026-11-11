@@ -31,13 +31,13 @@ docker compose up -d      # Redis (session memory) + Postgres (brand memory)
 uvicorn app.main:app
 ```
 
-Open **http://localhost:8000**. The header says "Demo mode" when you are in demo mode, and shows which storage the dashboard is using.
+Open **http://localhost:8000**. The top bar says "demo" or "live" and which storage the dashboard is using.
 
 ## 2. Find your way around
 
-The dark bar under the header has four tabs:
+The bar under the title has four tabs:
 
-- **Overview**: every engagement, sorted into what needs you.
+- **Overview**: the agent terminal. Each agent's card shows its rule, status and last action; the live flow shows where the selected engagement is in the pipeline; the log lists every decision with its reason. Click an engagement above the flow to follow it.
 - **New engagement**: the client brief form.
 - **Brand memory**: what the agency has learned about each client.
 - **How it works**: the pipeline and the quality rules, for new team members.

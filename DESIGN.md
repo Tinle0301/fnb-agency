@@ -249,6 +249,18 @@ Depth comes from tone, not shadow: white panels on warm paper.
 - **Toast:** bottom-right shell pill with a brand-light edge, auto-hides after 3.2s. PROPOSED: `role="status"`.
 - **Empty state** (`.empty`): dashed border, italic, centred message. PROPOSED: text in `ink-muted` (current `#9c958a` is 3.0:1) and a next action where there is one.
 
+## Agent terminal (Overview)
+
+The Overview is a live terminal view of the agency, modeled on an agent-terminal layout Tin picked: a light window with a title bar, a mascot mark, a headline status line with a ticking clock, and headline numbers (brands signed off, engagements, need you, average QA score).
+
+- **Agents column:** one card per specialist (Research, Strategist, Messaging, Identity, Report, QA gate, Memory) plus **You**. Each card shows its icon, name, role, the rule it works under, a status badge (idle, working, done, pass, flag, revise, saved, failed, your turn) and its last action. The working agent, or You when something waits, gets a 2px ink border and the float shadow.
+- **Agent hues** (`--ag-*`): research `#2f6487`, strategist `#6a4a8c`, messaging `#8f6212`, identity `#b04a33`, report `#2b7a55`, QA `#9e3346`, memory `#566070`, you `#17150f`. Each passes 4.5:1 as text on white and on paper. They identify agents only; the brand brown still means "a person is needed here".
+- **Live flow:** an inline SVG of the pipeline for the selected engagement (chips above it switch engagements). Agent nodes fill with their hue when done, ring and halo while working; checkpoint diamonds turn brand when waiting; a dashed arc from QA back to Messaging lights up when QA sent work back, with a tilted PASSED or FLAGGED stamp on the QA node. Four boxes below: QA gate, You, Log line count, Memory.
+- **Engagement panel, tail and result:** the selected engagement's brief vs now with the latest reason; a `tail -f` of the last six log lines; a start vs now bar (deliverables out of six, approved vs sent back).
+- **Log:** every meaningful event across engagements (`GET /activity`) as a tag, client, metric and a `reason:` line. It keeps your scroll position and follows new lines when you are at the bottom.
+- **Type:** the terminal uses `--font-mono` (system monospace: SF Mono on a Mac). Labels there are uppercase and tracked on purpose, to match the terminal look; the rest of the dashboard keeps the sans rules below.
+- **Motion:** the halo, the live dash on the active segment, the caret and the mascot blink are state, and all stop under `prefers-reduced-motion`.
+
 ## Do's and Don'ts
 
 Do:
@@ -283,8 +295,8 @@ Things in today's `dashboard.html` that break the project's frontend design rule
 **Floor**
 1. Contrast: status pill text on its soft background (`.pill.ok`, `.warn`, `.bad` at 2.9–3.1:1; banners already use darker inks and pass), coloured step state text on white (green 3.4:1, red 3.9:1), `.empty` text 3.0:1, brand-coloured 10–11px labels on paper 4.05:1. Fix with the `-ink` and `brand-ink` tokens.
 2. Text below 12px: labels, pills, nav counts and KPI labels at 10–11px.
-3. No `prefers-reduced-motion` handling for the page fade or the pulsing badge.
-4. Emoji `✋` as the checkpoint icon in the pipeline. Replace with an inline SVG (a hand or a flag) in `currentColor`, plus the visible "Checkpoint" wording.
+3. Fixed: a `prefers-reduced-motion` block stops the page fade, the pulses and the terminal animations.
+4. Fixed: checkpoints in the pipeline use an inline SVG person icon in `currentColor` instead of the emoji.
 5. Raw hex below the token block (`#fff`, `#2b261d`, `#eceae4`, `#5c5346`, `#efe9df`, `#fbf6ef`, `#9c958a`, nav and header colours). Move them into `:root` using the names above.
 6. The toast is not announced to assistive tech (`role="status"` missing).
 

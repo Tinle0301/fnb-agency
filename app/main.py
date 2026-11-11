@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from contextlib import asynccontextmanager
+from datetime import datetime
 from pathlib import Path
 from typing import Any
 
@@ -66,6 +67,18 @@ class DecisionRequest(BaseModel):
 
 class FactReview(BaseModel):
     status: FactStatus
+
+
+class ActivityItem(BaseModel):
+    """One run event with the engagement it belongs to, for the dashboard's live log."""
+
+    run_id: str
+    client_name: str
+    at: datetime
+    kind: str
+    stage: str | None = None
+    actor: str = "system"
+    detail: dict[str, Any] = {}
 
 
 class RunView(BaseModel):
@@ -170,6 +183,17 @@ def create_app(orchestrator: Orchestrator | None = None, settings: Settings | No
     async def get_events(run_id: str, o: Orchestrator = Depends(orch)) -> list[RunEvent]:
         await load(run_id, o)
         return await o.sessions.get_events(run_id)
+
+    @app.get("/activity", response_model=list[ActivityItem])
+    async def activity(limit: int = 300, runs: int = 25, o: Orchestrator = Depends(orch)) -> list[ActivityItem]:
+        """Recent events across the latest engagements, oldest first: the dashboard's live log."""
+        limit, runs = max(1, min(limit, 1000)), max(1, min(runs, 100))
+        items: list[ActivityItem] = []
+        for run in await o.list_runs(runs):
+            for event in await o.sessions.get_events(run.id):
+                items.append(ActivityItem(run_id=run.id, client_name=run.brief.client_name, **event.model_dump()))
+        items.sort(key=lambda item: item.at)
+        return items[-limit:]
 
     @app.post("/runs/{run_id}/decision", response_model=RunView)
     async def decide(
