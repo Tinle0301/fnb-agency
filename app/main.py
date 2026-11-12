@@ -17,6 +17,7 @@ from app.exports import (
     design_system_zip,
     report_markdown,
     seo_brief_md,
+    social_plan_md,
     slugify,
 )
 from app.llm import LLM, AnthropicLLM, CliLLM
@@ -41,6 +42,7 @@ from app.schemas import (
     MessagingOutput,
     ReportOutput,
     ResearchOutput,
+    SocialOutput,
     Run,
     RunEvent,
     RunStatus,
@@ -243,6 +245,14 @@ def create_app(orchestrator: Orchestrator | None = None, settings: Settings | No
         run = await load(run_id, o)
         return seo_brief_md(*_approved_inputs(run))
 
+    @app.get("/runs/{run_id}/social-plan.md", response_class=PlainTextResponse)
+    async def social_plan(run_id: str, o: Orchestrator = Depends(orch)) -> str:
+        """Platforms, pillars, four-week calendar and ready-to-film scripts (also in the .zip)."""
+        run = await load(run_id, o)
+        if "social" not in run.outputs:
+            raise HTTPException(404, "social plan not produced yet")
+        return social_plan_md(run.brief, SocialOutput.model_validate(run.outputs["social"]))
+
     @app.get("/settings")
     async def public_settings(o: Orchestrator = Depends(orch)) -> dict[str, Any]:
         """Workflow settings the dashboard shows (no secrets, no model IDs)."""
@@ -291,7 +301,10 @@ def _approved_inputs(run: Run) -> tuple[ClientBrief, StrategyOutput, MessagingOu
 
 
 def _design_files(run: Run) -> dict[str, str]:
-    return design_system_files(*_approved_inputs(run))
+    files = design_system_files(*_approved_inputs(run))
+    if "social" in run.outputs:
+        files["SOCIAL_PLAN.md"] = social_plan_md(run.brief, SocialOutput.model_validate(run.outputs["social"]))
+    return files
 
 
 app = create_app()

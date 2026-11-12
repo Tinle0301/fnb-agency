@@ -161,6 +161,74 @@ class MessagingOutput(BaseModel):
     sample_copy: list[CopySample]
 
 
+class PlatformPlan(BaseModel):
+    platform: str = Field(description="e.g. Facebook, Instagram, TikTok, Zalo OA, Google Business Profile.")
+    role: str = Field(description="The job this platform does for the brand and why this audience uses it.")
+    formats: list[str] = Field(description="Formats to post here, e.g. 'Reels 15-30s', 'carousel', 'Stories'.")
+    posts_per_week: int
+    best_times: str = Field(description="When to post, as a local rule of thumb; say it is a starting point to test.")
+
+
+class ContentPillar(BaseModel):
+    name: str
+    purpose: str = Field(description="What this pillar does for the brand; ties back to a strategy pillar.")
+    share_percent: int = Field(description="Share of posts; all pillars add up to 100.")
+    example_topics: list[str]
+
+
+class ScriptScene(BaseModel):
+    time: str = Field(description="Time range in the video, e.g. '0-3s'.")
+    shot: str = Field(description="What the camera shows and how it is filmed (phone is fine).")
+    voiceover: str = Field(description="Spoken line, or empty for none.")
+    on_screen_text: str = Field(description="Text overlay, or empty for none.")
+
+
+class VideoScript(BaseModel):
+    title: str
+    platform: str
+    format: str = Field(description="e.g. 'Reel 20s', 'TikTok 30s', 'Story 3 frames', 'carousel 5 slides'.")
+    pillar: str = Field(description="Name of the content pillar this script serves.")
+    goal: str = Field(description="What this post should make a viewer do or feel.")
+    hook: str = Field(description="The first 1-3 seconds that stop the scroll.")
+    scenes: list[ScriptScene]
+    call_to_action: str
+    caption: str = Field(description="Ready-to-post caption in the brand's tone and the audience's language.")
+    hashtags: list[str]
+    production_notes: str = Field(description="Props, location, who appears, music mood; filmable by a small team on a phone.")
+    confirm_before_posting: list[str] = Field(
+        description="Facts the owner must confirm or add before this goes out (address, hours, a price). "
+        "The script itself never holds a bracketed blank; it is written so it works without them."
+    )
+
+
+class CalendarItem(BaseModel):
+    week: int
+    day: str
+    platform: str
+    pillar: str
+    idea: str
+    script_title: str = Field(description="Title of the script this slot uses, or empty.")
+
+
+class SocialKPI(BaseModel):
+    metric: str
+    target: str = Field(
+        description="How to set the target without inventing numbers: measure a baseline in the first 30 days, "
+        "then say what direction to move it (e.g. 'Baseline in month 1, then grow month on month')."
+    )
+    why: str
+
+
+class SocialOutput(BaseModel):
+    summary: str = Field(description="Three to five sentences: who we talk to, where, and the one idea that ties the content together.")
+    platforms: list[PlatformPlan]
+    content_pillars: list[ContentPillar]
+    scripts: list[VideoScript] = Field(description="Six or more ready-to-film scripts spread across pillars and platforms.")
+    calendar: list[CalendarItem] = Field(description="Four weeks of posts.")
+    kpis: list[SocialKPI]
+    community_rules: list[str] = Field(description="How to reply to comments, reviews and complaints in the brand's voice.")
+
+
 class PaletteColor(BaseModel):
     name: str
     hex: str
@@ -234,8 +302,8 @@ class ReportOutput(BaseModel):
 class QAIssue(BaseModel):
     severity: Literal["blocker", "major", "minor"]
     location: str = Field(
-        description="Deliverable and field, starting with research, strategy, messaging, identity or report "
-        "(e.g. 'messaging.tagline_options', 'identity.tokens.accent', 'report.sections.Strategy')."
+        description="Deliverable and field, starting with research, strategy, messaging, identity, social or report "
+        "(e.g. 'messaging.tagline_options', 'identity.tokens.accent', 'social.scripts', 'report.sections.Strategy')."
     )
     problem: str
     suggested_fix: str
@@ -308,12 +376,13 @@ class Stage(str, Enum):
     research = "research"
     strategy = "strategy"
     creative = "creative"  # Messaging Lead + Identity Direction, in parallel
+    social = "social"  # Social Media Strategist: plan, calendar and scripts
     report = "report"  # Report Producer + QA Reviewer loop
     final = "final"  # human sign-off, then fact extraction
     done = "done"
 
 
-STAGE_ORDER = [Stage.research, Stage.strategy, Stage.creative, Stage.report, Stage.final]
+STAGE_ORDER = [Stage.research, Stage.strategy, Stage.creative, Stage.social, Stage.report, Stage.final]
 
 
 class RunStatus(str, Enum):

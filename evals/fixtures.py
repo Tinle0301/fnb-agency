@@ -19,6 +19,7 @@ from app.schemas import (
     QAOutput,
     ReportOutput,
     ResearchOutput,
+    SocialOutput,
     StrategyOutput,
 )
 
@@ -302,6 +303,67 @@ BREWERY_REPORT = ReportOutput(
     next_steps=["Brief the designer on the buoy mark", "Plan the single photo shoot at the pier at dawn"],
 )
 
+
+def _script(title: str, platform: str, fmt: str, pillar: str, hook: str, shot: str) -> dict:
+    return {
+        "title": title,
+        "platform": platform,
+        "format": fmt,
+        "pillar": pillar,
+        "goal": "Make a local regular want to stop by this week.",
+        "hook": hook,
+        "scenes": [
+            {"time": "0-3s", "shot": shot, "voiceover": "", "on_screen_text": hook},
+            {"time": "3-12s", "shot": "Hands pour a pint at the taproom bar, pier through the window.", "voiceover": "Brewed where the boats come in.", "on_screen_text": ""},
+            {"time": "12-18s", "shot": "Wide shot of the taproom at golden hour.", "voiceover": "", "on_screen_text": "Harbor Hops, on the pier"},
+        ],
+        "call_to_action": "Come by the taproom on the pier.",
+        "caption": "Brewed where the boats come in. See you on the pier.",
+        "hashtags": ["#PortlandMaine", "#HarborHops", "#MaineBeer"],
+        "production_notes": "Phone on a small tripod, natural light, Harbor Teal apron, no music with lyrics.",
+        "confirm_before_posting": ["Taproom hours this week"],
+    }
+
+
+BREWERY_SOCIAL = SocialOutput(
+    summary=(
+        "Talk to Portland locals on Instagram and TikTok with short, calm videos from the pier. Every post shows "
+        "the real people and grain behind the beer, so the brewery feels like a local's place, not a tourist stop."
+    ),
+    platforms=[
+        {"platform": "Instagram", "role": "Main home for locals who plan nights out.", "formats": ["Reels 15-30s", "carousel"], "posts_per_week": 4, "best_times": "Thu-Sat late afternoon; test and adjust."},
+        {"platform": "TikTok", "role": "Reach younger locals with behind-the-scenes clips.", "formats": ["TikTok 20-40s"], "posts_per_week": 3, "best_times": "Evenings; test and adjust."},
+        {"platform": "Google Business Profile", "role": "Show up when people search for a taproom nearby.", "formats": ["photo update", "event post"], "posts_per_week": 1, "best_times": "Monday morning for the week's events."},
+    ],
+    content_pillars=[
+        {"name": "Working Waterfront", "purpose": "Ties the beer to the pier (strategy pillar Working Waterfront).", "share_percent": 40, "example_topics": ["Dawn on the pier", "Boats coming in"]},
+        {"name": "Maine Grown", "purpose": "Shows the grain and the people (strategy pillar Maine Grown).", "share_percent": 35, "example_topics": ["Maine Grains delivery", "Brew day"]},
+        {"name": "Easy Company", "purpose": "Invites locals in (strategy pillar Easy Company).", "share_percent": 25, "example_topics": ["Trivia night", "Meet the bar staff"]},
+    ],
+    scripts=[
+        _script("Dawn on the pier", "Instagram", "Reel 18s", "Working Waterfront", "5 a.m. on the pier.", "Boats leave at first light."),
+        _script("Where the grain comes from", "Instagram", "Reel 20s", "Maine Grown", "This beer started on a Maine farm.", "Grain sacks unloaded at the brewery."),
+        _script("Brew day in 20 seconds", "TikTok", "TikTok 20s", "Maine Grown", "Ever seen a brew day?", "Steam rising from the kettle."),
+        _script("Meet the lobstermen", "TikTok", "TikTok 30s", "Working Waterfront", "We used to haul traps.", "Founders on the dock with old buoys."),
+        _script("Trivia night", "Instagram", "Story 3 frames", "Easy Company", "Thursday. Trivia. Pier.", "Crowd laughing at the bar."),
+        _script("Your seat at the bar", "TikTok", "TikTok 15s", "Easy Company", "Grab a seat at the bar.", "Empty stool, pint slides in."),
+    ],
+    calendar=[
+        {"week": 1, "day": "Tue", "platform": "Instagram", "pillar": "Working Waterfront", "idea": "Dawn on the pier", "script_title": "Dawn on the pier"},
+        {"week": 1, "day": "Thu", "platform": "TikTok", "pillar": "Maine Grown", "idea": "Brew day", "script_title": "Brew day in 20 seconds"},
+        {"week": 2, "day": "Tue", "platform": "Instagram", "pillar": "Maine Grown", "idea": "Grain delivery", "script_title": "Where the grain comes from"},
+        {"week": 2, "day": "Thu", "platform": "Instagram", "pillar": "Easy Company", "idea": "Trivia night", "script_title": "Trivia night"},
+    ],
+    kpis=[
+        {"metric": "Instagram saves per Reel", "target": "Baseline in month 1, then grow month on month", "why": "Saves show locals plan to visit."},
+        {"metric": "Taproom visits mentioning social", "target": "Ask at the bar and count weekly; baseline in month 1, then grow", "why": "Ties posts to real visits."},
+    ],
+    community_rules=[
+        "Reply within a day, in the same plain voice as the posts.",
+        "Thank people for complaints, move details to a direct message, never argue in public.",
+    ],
+)
+
 QA_PASS = QAOutput(passed=True, score=8, issues=[], summary="On brief and compliant; ready for the strategist.")
 
 QA_FAIL = QAOutput(
@@ -357,6 +419,7 @@ BREWERY_OUTPUTS = {
     MessagingOutput: BREWERY_MESSAGING,
     IdentityDirections: BREWERY_DIRECTIONS,
     IdentityOutput: BREWERY_IDENTITY,  # what the refiner returns
+    SocialOutput: BREWERY_SOCIAL,
     ReportOutput: BREWERY_REPORT,
     QAOutput: QA_PASS,
     FactExtraction: BREWERY_FACTS,

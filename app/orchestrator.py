@@ -35,6 +35,7 @@ from app.agents import (
     QAReviewer,
     ReportProducer,
     ResearchAnalyst,
+    SocialStrategist,
 )
 from app.agents.base import Agent, AgentContext, AgentResult
 from app.config import Settings
@@ -58,6 +59,7 @@ from app.schemas import (
     QAOutput,
     ReportOutput,
     ResearchOutput,
+    SocialOutput,
     Run,
     RunEvent,
     RunStatus,
@@ -73,6 +75,7 @@ OUTPUT_TYPES: dict[str, type[BaseModel]] = {
     "messaging": MessagingOutput,
     "identity": IdentityOutput,
     "identity_directions": IdentityDirections,
+    "social": SocialOutput,
     "report": ReportOutput,
     "qa": QAOutput,
 }
@@ -82,6 +85,7 @@ CHECKPOINT_AFTER: dict[Stage, str | None] = {
     Stage.research: "research",
     Stage.strategy: "strategy",
     Stage.creative: "creative",
+    Stage.social: "social",
     Stage.report: "final",
     Stage.final: None,
 }
@@ -101,9 +105,9 @@ def next_stage(stage: Stage) -> Stage:
 
 
 def owner_of(location: str) -> str:
-    """Which deliverable a QA issue location points at: messaging, identity, or report."""
+    """Which deliverable a QA issue location points at: messaging, identity, social, or report."""
     head = location.strip().lower()
-    for owner in ("messaging", "identity"):
+    for owner in ("messaging", "identity", "social"):
         if head.startswith(owner):
             return owner
     return "report"
@@ -134,6 +138,7 @@ class Orchestrator:
         self.messaging = MessagingLead(llm, model, effort)
         self.identity = IdentityDirection(llm, model, effort)
         self.identity_refiner = IdentityRefiner(llm, model, effort)
+        self.social = SocialStrategist(llm, model, effort)
         self.reporter = ReportProducer(llm, model, effort)
         self.qa = QAReviewer(llm, model, effort)
         self.extractor = FactExtractor(llm, settings.extractor_model, settings.extractor_effort)
@@ -320,7 +325,15 @@ class Orchestrator:
                 run.outputs["identity_directions"] = explored.model_dump()
                 run.chosen_direction = None
                 run.outputs["identity"] = explored.directions[self._recommended(run)].model_dump()
+        elif run.stage is Stage.social:
+            result = await self._run_agent(run, self.social, run.feedback.get("social", []))
+            run.outputs["social"] = result.output.model_dump()
         elif run.stage is Stage.report:
+            if run.feedback.get("report"):
+                # Sign-off notes often concern the posts and scripts: the strategist sees them too.
+                notes = run.feedback.get("social", []) + run.feedback["report"]
+                result = await self._run_agent(run, self.social, notes)
+                run.outputs["social"] = result.output.model_dump()
             await self._report_with_qa(run)
         elif run.stage is Stage.final:
             await self._extract_facts(run)
@@ -350,6 +363,7 @@ class Orchestrator:
                 checks.check_report(report, alcohol)
                 + checks.check_messaging(outputs["messaging"], alcohol)
                 + checks.check_identity(outputs["identity"])
+                + (checks.check_social(outputs["social"], alcohol) if "social" in outputs else [])
             )
             automated = [f.__dict__ for f in findings]
             ctx = await self._context(run, extra={"automated_findings": automated})
@@ -386,13 +400,13 @@ class Orchestrator:
             if passed or attempt == self.settings.max_qa_revisions:
                 break
 
-            routed: dict[str, list[str]] = {"messaging": [], "identity": [], "report": []}
+            routed: dict[str, list[str]] = {"messaging": [], "identity": [], "social": [], "report": []}
             for issue in gating_issues:
                 note = f"QA {issue.severity} in {issue.location}: {issue.problem} Fix: {issue.suggested_fix}"
                 routed[owner_of(issue.location)].append(note)
             for finding in automated_blockers:
                 routed[owner_of(finding.location)].append(f"Automated check ({finding.location}): {finding.problem}")
-            await self._revise_creative(run, routed["messaging"], routed["identity"])
+            await self._revise_creative(run, routed["messaging"], routed["identity"], routed["social"])
             report_fixes = routed["report"]
 
         run.qa_attempts = attempts
@@ -401,16 +415,23 @@ class Orchestrator:
             log.warning("qa.escalated", attempts=attempts)
             await self._event(run, "qa.escalated", detail={"attempts": attempts})
 
-    async def _revise_creative(self, run: Run, messaging_fixes: list[str], identity_fixes: list[str]) -> None:
+    async def _revise_creative(
+        self, run: Run, messaging_fixes: list[str], identity_fixes: list[str], social_fixes: list[str] | None = None
+    ) -> None:
         jobs = []
         if messaging_fixes:
             jobs.append(("messaging", self.messaging, messaging_fixes))
         if identity_fixes:
             jobs.append(("identity", self.identity_refiner, identity_fixes))
+        if social_fixes:
+            jobs.append(("social", self.social, social_fixes))
         if not jobs:
             return
-        prior = run.feedback.get("creative", [])
-        results = await asyncio.gather(*(self._run_agent(run, agent, prior + fixes) for _, agent, fixes in jobs))
+
+        def prior(key: str) -> list[str]:
+            return run.feedback.get("social" if key == "social" else "creative", [])
+
+        results = await asyncio.gather(*(self._run_agent(run, agent, prior(key) + fixes) for key, agent, fixes in jobs))
         for (key, agent, fixes), result in zip(jobs, results):
             if key == "identity":
                 self._replace_chosen_direction(run, result.output)

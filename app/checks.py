@@ -116,6 +116,50 @@ def check_messaging(messaging: MessagingOutput, alcohol: bool = False) -> list[F
     return findings
 
 
+def _script_texts(sc) -> list[str]:
+    return [sc.hook, sc.caption, sc.call_to_action, *(f"{c.voiceover} {c.on_screen_text}" for c in sc.scenes)]
+
+
+def check_social(social, alcohol: bool = False) -> list[Finding]:
+    findings: list[Finding] = []
+    if len(social.scripts) < 6:
+        findings.append(Finding("major", "social.scripts", f"Expected 6 or more scripts, got {len(social.scripts)}"))
+    for script in social.scripts:
+        if not script.hook.strip() or not script.scenes:
+            findings.append(Finding("major", "social.scripts", f"Script '{script.title}' needs a hook and scenes"))
+    platform_of = {sc.title.strip().lower(): sc.platform.strip().lower() for sc in social.scripts}
+    for slot in social.calendar:
+        wanted = platform_of.get(slot.script_title.strip().lower())
+        if wanted and wanted != slot.platform.strip().lower():
+            findings.append(
+                Finding(
+                    "major",
+                    "social.calendar",
+                    f"Week {slot.week} {slot.day} puts '{slot.script_title}' on {slot.platform}, "
+                    f"but the script is written for {wanted}",
+                )
+            )
+    if any("[" in t for sc in social.scripts for t in _script_texts(sc)):
+        findings.append(Finding("major", "social.scripts", "A script has a bracketed blank; list it in confirm_before_posting instead"))
+    total = sum(p.share_percent for p in social.content_pillars)
+    if social.content_pillars and total != 100:
+        findings.append(Finding("minor", "social.content_pillars", f"Pillar shares add up to {total}%, not 100%"))
+    text = " ".join(
+        [social.summary]
+        + [k.target for k in social.kpis]
+        + [
+            " ".join(_script_texts(s))
+            for s in social.scripts
+        ]
+    )
+    findings += health_claims(text, "social")
+    findings += invented_metrics(text, "social")
+    findings += placeholders(text, "social")
+    if alcohol:
+        findings += alcohol_marketing(text, "social")
+    return findings
+
+
 # Craft rules adapted from OpenDesign's craft/color.md and craft/anti-ai-slop.md
 # (github.com/nexu-io/open-design, Apache-2.0; originally from refero_skill, MIT).
 

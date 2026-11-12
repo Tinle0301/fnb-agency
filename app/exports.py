@@ -19,6 +19,9 @@ And SEO_BRIEF.md: the search starter kit for whoever builds the site. Local keyw
 and meta description per page from the approved messaging, Schema.org JSON-LD for the business
 (placeholders where the brief has no data), a Google Business Profile checklist and a build
 checklist. It is generated in code from the approved work, so it costs no model calls.
+
+And SOCIAL_PLAN.md: the Social Media Strategist's plan, with platforms, content pillars, a
+four-week calendar, ready-to-film scripts, KPIs and community rules.
 """
 
 from __future__ import annotations
@@ -38,6 +41,7 @@ from app.schemas import (
     SemanticTokens,
     StrategyOutput,
     ResearchOutput,
+    SocialOutput,
 )
 
 
@@ -740,6 +744,60 @@ def design_system_files(
         "BRAND_GUIDELINE.md": brand_guideline_md(brief, strategy, messaging, identity),
         "SEO_BRIEF.md": seo_brief_md(brief, strategy, messaging, identity),
     }
+
+
+def social_plan_md(brief: ClientBrief, social: SocialOutput) -> str:
+    """The social media plan as a Markdown file the owner or a content creator can work from."""
+    out = [f"# {brief.client_name}: social media plan", "", social.summary.strip(), "", "## Platforms", ""]
+    out += ["| Platform | Job | Formats | Posts per week | When to post |", "|---|---|---|---|---|"]
+    out += [
+        f"| {_cell(p.platform)} | {_cell(p.role)} | {_cell(', '.join(p.formats))} | {p.posts_per_week} | {_cell(p.best_times)} |"
+        for p in social.platforms
+    ]
+    out += ["", "## Content pillars", "", "| Pillar | Share | Purpose | Example topics |", "|---|---|---|---|"]
+    out += [
+        f"| {_cell(c.name)} | {c.share_percent}% | {_cell(c.purpose)} | {_cell('; '.join(c.example_topics))} |"
+        for c in social.content_pillars
+    ]
+    out += ["", "## Four-week calendar", "", "| Week | Day | Platform | Pillar | Post | Script |", "|---|---|---|---|---|---|"]
+    out += [
+        f"| {c.week} | {_cell(c.day)} | {_cell(c.platform)} | {_cell(c.pillar)} | {_cell(c.idea)} | {_cell(c.script_title)} |"
+        for c in social.calendar
+    ]
+    out += ["", "## Scripts", ""]
+    for n, sc in enumerate(social.scripts, 1):
+        out += [
+            f"### {n}. {sc.title}",
+            "",
+            f"**{sc.platform}, {sc.format}.** Pillar: {sc.pillar}. Goal: {sc.goal}",
+            "",
+            f"**Hook:** {sc.hook}",
+            "",
+            "| Time | Shot | Voiceover | On-screen text |",
+            "|---|---|---|---|",
+        ]
+        out += [
+            f"| {_cell(c.time)} | {_cell(c.shot)} | {_cell(c.voiceover)} | {_cell(c.on_screen_text)} |" for c in sc.scenes
+        ]
+        out += [
+            "",
+            f"**Call to action:** {sc.call_to_action}",
+            "",
+            "**Caption:**",
+            "",
+            sc.caption.strip(),
+            "",
+            "**Hashtags:** " + " ".join(sc.hashtags),
+            "",
+            f"**Production notes:** {sc.production_notes}",
+            "",
+        ]
+        if sc.confirm_before_posting:
+            out += ["**Confirm before posting:**", ""] + [f"- {x}" for x in sc.confirm_before_posting] + [""]
+    out += ["## KPIs for the first 90 days", "", "| Metric | Starting target | Why |", "|---|---|---|"]
+    out += [f"| {_cell(k.metric)} | {_cell(k.target)} | {_cell(k.why)} |" for k in social.kpis]
+    out += ["", "## Replying to comments and reviews", ""] + [f"- {r}" for r in social.community_rules]
+    return "\n".join(out).strip() + "\n"
 
 
 def design_system_zip(files: dict[str, str], slug: str) -> bytes:
